@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -48,13 +47,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Generates and stores a hashed 10-character alphanumeric login code
-     * (never stored in plain text, same as the password) and returns the
-     * plain code for the caller to email. Overwrites any previous code.
+     * Uppercase letters, digits, and a handful of special characters picked
+     * for being unambiguous to read and easy to type on any keyboard —
+     * deliberately excludes lookalikes (0/O, 1/I/L) and characters that are
+     * awkward to type or read in an email (backtick, quotes, backslash).
+     */
+    private const TWO_FACTOR_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*-_+?';
+
+    /**
+     * Generates and stores a hashed 10-character login code — letters,
+     * digits, and special characters (never stored in plain text, same as
+     * the password) — and returns the plain code for the caller to email.
+     * Overwrites any previous code.
      */
     public function generateTwoFactorCode(): string
     {
-        $code = strtoupper(Str::random(10));
+        $alphabet = self::TWO_FACTOR_CODE_ALPHABET;
+        $code = '';
+
+        for ($i = 0; $i < 10; $i++) {
+            $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
 
         $this->forceFill([
             'two_factor_code' => bcrypt($code),

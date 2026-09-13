@@ -3,6 +3,15 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.4.0] - 2026-09-13
+
+### Changed
+- 2FA login codes are still 10 characters but now draw from letters,
+  digits, and a handful of special characters instead of alphanumeric
+  only — deliberately excludes lookalike characters (0/O, 1/I/L) and
+  anything awkward to type or read in an email (backtick, quotes,
+  backslash).
+
 ## [0.5.3.0] - 2026-09-13
 
 ### Fixed

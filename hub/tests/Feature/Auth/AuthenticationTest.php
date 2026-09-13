@@ -75,6 +75,15 @@ class AuthenticationTest extends TestCase
         $this->assertNull($user->fresh()->two_factor_code);
     }
 
+    public function test_two_factor_code_is_ten_characters_from_the_expected_alphabet(): void
+    {
+        $user = User::factory()->create();
+        $code = $user->generateTwoFactorCode();
+
+        $this->assertSame(10, strlen($code));
+        $this->assertMatchesRegularExpression('/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%&*\-_+?]{10}$/', $code);
+    }
+
     public function test_an_incorrect_two_factor_code_does_not_log_in(): void
     {
         $user = User::factory()->create();
