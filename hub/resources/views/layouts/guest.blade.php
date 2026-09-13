@@ -7,12 +7,15 @@
 
         <title>{{ config('app.name', 'LANHub') }}</title>
 
+        <!-- Reapplied on livewire:navigated — see layouts/app.blade.php for why. -->
         <script>
-            (function () {
+            function lanhubApplyTheme() {
                 var stored = localStorage.getItem('lanhub-theme');
                 var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
                 document.documentElement.classList.toggle('dark', dark);
-            })();
+            }
+            lanhubApplyTheme();
+            document.addEventListener('livewire:navigated', lanhubApplyTheme);
         </script>
 
         <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">

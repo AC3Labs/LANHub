@@ -9,13 +9,19 @@
 
         <!-- Applied before first paint so there's no flash of the wrong
              theme; the toggle in layout/navigation.blade.php calls
-             window.lanhubSetTheme() to flip it afterward. -->
+             window.lanhubSetTheme() to flip it afterward. Also reapplied on
+             every livewire:navigated event — wire:navigate swaps the <html>
+             element's content in from the server (which never has a "dark"
+             class, since theme is client-only), so without this the theme
+             silently reverted to light on every SPA-style page change. -->
         <script>
-            (function () {
+            function lanhubApplyTheme() {
                 var stored = localStorage.getItem('lanhub-theme');
                 var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
                 document.documentElement.classList.toggle('dark', dark);
-            })();
+            }
+            lanhubApplyTheme();
+            document.addEventListener('livewire:navigated', lanhubApplyTheme);
             window.lanhubSetTheme = function (dark) {
                 document.documentElement.classList.toggle('dark', dark);
                 localStorage.setItem('lanhub-theme', dark ? 'dark' : 'light');

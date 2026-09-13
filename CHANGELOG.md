@@ -3,6 +3,17 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.3.0] - 2026-09-13
+
+### Fixed
+- Dark mode no longer reverts to light when navigating between pages.
+  `wire:navigate` swaps in fresh server-rendered HTML (which never carries
+  a `dark` class, since the theme is applied client-side only) without
+  re-running unchanged inline `<script>` tags, so the one-time theme
+  script never fired again after the first page load. Now reapplied on
+  every `livewire:navigated` event, in both the authenticated and guest
+  layouts.
+
 ## [0.5.2.0] - 2026-09-13
 
 ### Fixed
