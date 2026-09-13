@@ -1,0 +1,14 @@
+[Unit]
+Description=LANHub Agent
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/lanhub-agent
+ExecStart=/opt/lanhub-agent/.venv/bin/python /opt/lanhub-agent/agent.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

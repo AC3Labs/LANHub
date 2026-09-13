@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Every color Tailwind token below (see tailwind.config.js) resolves to
+ * one of these custom properties instead of a static hex value, so
+ * toggling the `dark` class on <html> (see resources/js/dark-mode.js)
+ * re-points every `bg-stone-100`, `text-stone-800`, etc. across the whole
+ * app at once — no per-view changes needed. Values are space-separated
+ * "R G B" so Tailwind's `rgb(var(...) / <alpha-value>)` opacity-modifier
+ * syntax works (e.g. `bg-stone-50/80`).
+ */
+:root {
+    --color-paper: 255 255 255;
+    --color-paper-soft: 251 250 248;
+
+    --color-stone-50: 248 247 245;
+    --color-stone-100: 239 238 234;
+    --color-stone-200: 226 223 216;
+    --color-stone-300: 203 198 186;
+    --color-stone-400: 168 160 148;
+    --color-stone-500: 134 125 110;
+    --color-stone-600: 106 98 85;
+    --color-stone-700: 84 78 68;
+    --color-stone-800: 64 60 52;
+    --color-stone-900: 44 41 37;
+
+    --color-tan-50: 250 246 238;
+    --color-tan-100: 243 234 216;
+    --color-tan-200: 230 211 174;
+    --color-tan-300: 214 184 126;
+    --color-tan-400: 196 156 88;
+    --color-tan-500: 172 133 68;
+    --color-tan-600: 140 106 55;
+    --color-tan-700: 109 82 44;
+    --color-tan-800: 82 64 36;
+    --color-tan-900: 58 46 26;
+}
+
+/* Ramp inverted, not just darkened — stone-50 (near-white background in
+   light mode) becomes the darkest surface, stone-800/900 (body text/
+   headings in light mode) become the lightest, so every existing
+   `bg-stone-100` / `text-stone-800` usage still makes sense read as
+   "background surface" / "primary text" once dark mode is on. tan (the
+   accent) stays close to its light-mode values — it's used for accents/
+   links/buttons on both themes and already has enough contrast on a
+   dark surface. */
+.dark {
+    --color-paper: 30 28 25;
+    --color-paper-soft: 24 22 20;
+
+    --color-stone-50: 23 21 19;
+    --color-stone-100: 32 30 27;
+    --color-stone-200: 51 47 42;
+    --color-stone-300: 74 68 60;
+    --color-stone-400: 140 131 117;
+    --color-stone-500: 163 154 139;
+    --color-stone-600: 191 182 166;
+    --color-stone-700: 214 206 190;
+    --color-stone-800: 237 231 220;
+    --color-stone-900: 250 247 242;
+}

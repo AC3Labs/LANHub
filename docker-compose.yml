@@ -1,0 +1,18 @@
+services:
+  hub:
+    build: ./hub
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Your own .env (copy hub/.env.example -> hub/.env first and fill
+      # it in) — bind-mounted as a single file so it survives rebuilds.
+      - ./hub/.env:/var/www/html/.env
+      # Deliberately NOT the whole database/ directory — that would hide
+      # the image's own database/migrations/ folder on every rebuild and
+      # new migrations would silently never run. Only the sqlite file
+      # itself needs to persist.
+      - hub_db:/var/www/html/storage/db
+
+volumes:
+  hub_db:

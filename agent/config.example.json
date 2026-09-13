@@ -1,0 +1,10 @@
+{
+  "token": "REPLACE_WITH_A_LONG_RANDOM_TOKEN",
+  "host": "0.0.0.0",
+  "port": 8765,
+  "allowed_roots": [],
+  "log_file": "",
+  "throttle_kbps": 0,
+  "cert_file": "",
+  "key_file": ""
+}

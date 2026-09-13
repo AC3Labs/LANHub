@@ -1,0 +1,80 @@
+name: Notify on deployable push
+
+# LANHub's hub and agent are both deployed manually (see agent/README.md)
+# — nothing here deploys anything. This just pushes an
+# ntfy.sh reminder so a push to main doesn't silently sit undeployed,
+# and calls out specifically whether the hub, the agent(s), or both
+# need redeploying, since those are two separate manual steps on
+# different machines.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Determine what changed
+        id: changed
+        run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="${{ github.sha }}~1..${{ github.sha }}"
+          else
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          fi
+
+          FILES=$(git diff --name-only $RANGE || echo "")
+
+          HUB_CHANGED=false
+          AGENT_CHANGED=false
+
+          if echo "$FILES" | grep -q '^hub/'; then
+            HUB_CHANGED=true
+          fi
+          if echo "$FILES" | grep -q '^agent/'; then
+            AGENT_CHANGED=true
+          fi
+
+          echo "hub=$HUB_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "agent=$AGENT_CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Send ntfy.sh alert
+        if: steps.changed.outputs.hub == 'true' || steps.changed.outputs.agent == 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          if [ -z "$NTFY_TOPIC" ]; then
+            echo "::warning::NTFY_TOPIC secret is not set — skipping notification. Add it in Settings > Secrets and variables > Actions."
+            exit 0
+          fi
+
+          WHAT=""
+          if [ "${{ steps.changed.outputs.hub }}" = "true" ] && [ "${{ steps.changed.outputs.agent }}" = "true" ]; then
+            WHAT="Hub + agent"
+          elif [ "${{ steps.changed.outputs.hub }}" = "true" ]; then
+            WHAT="Hub"
+          else
+            WHAT="Agent"
+          fi
+
+          COMMIT_MSG=$(git log -1 --pretty=%s "${{ github.sha }}")
+
+          BODY="${COMMIT_MSG}"$'\n\n'"Redeploy needed: ${WHAT}"
+          if [ "${{ steps.changed.outputs.hub }}" = "true" ]; then
+            BODY="${BODY}"$'\n''- Hub: rsync -> docker build -> recreate container on nas'
+          fi
+          if [ "${{ steps.changed.outputs.agent }}" = "true" ]; then
+            BODY="${BODY}"$'\n''- Agent: push updated agent.py to every registered machine and restart its service'
+          fi
+
+          curl -s \
+            -H "Title: LANHub update pushed: ${WHAT}" \
+            -H "Tags: rocket" \
+            -H "Click: https://github.com/${{ github.repository }}/commit/${{ github.sha }}" \
+            -d "${BODY}" \
+            "https://ntfy.sh/${NTFY_TOPIC}"
