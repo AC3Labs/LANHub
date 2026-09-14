@@ -8,7 +8,7 @@ RUN npm run build
 
 FROM php:8.4-fpm
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        unzip git libsqlite3-dev nginx \
+        unzip git libsqlite3-dev nginx gettext-base \
     && docker-php-ext-install pdo pdo_sqlite bcmath \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -20,7 +20,7 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && composer install --no-dev --optimize-autoloader --no-interaction \
     && chown -R www-data:www-data storage bootstrap/cache
 
-COPY docker/nginx.conf /etc/nginx/sites-enabled/default
+COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

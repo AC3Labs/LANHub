@@ -8,6 +8,17 @@ services:
     # (e.g. testing a local change), swap this line for `build: ./hub`.
     image: ghcr.io/ac3labs/lanhub:latest
     restart: unless-stopped
+    # PORT controls what nginx actually listens on *inside* the
+    # container (defaults to 8000) — set it if your platform routes to a
+    # specific container-internal port rather than just remapping the
+    # host side below (Dokploy and similar work this way). If you only
+    # want a different port on the *host* machine and don't care what's
+    # happening inside the container, you don't need this at all — just
+    # change the left-hand side of the ports mapping, e.g. "8949:8000".
+    environment:
+      PORT: "8000"
+    # host:container — if you change PORT above, the container side
+    # (the number after the colon) must match it.
     ports:
       - "8000:8000"
     volumes:

@@ -3,6 +3,20 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.6.0.0] - 2026-09-14
+
+### Fixed
+- Reported by a real deployer: the container crash-looped forever on
+  first deploy if `APP_KEY` was never manually generated, and nginx's
+  listen port was hardcoded to 8000 regardless of any port configured
+  on the deploy platform (broke on Dokploy, which routes to a specific
+  container-internal port). The entrypoint now tries to generate
+  `APP_KEY` itself via Laravel's own file-writing (falls back to the
+  old clear-instructions-then-exit behavior only if the `.env` mount
+  truly isn't writable, which does happen on some hosts), and nginx's
+  port is now driven by a `PORT` environment variable (default 8000)
+  instead of being baked into the image.
+
 ## [0.5.9.0] - 2026-09-14
 
 ### Fixed

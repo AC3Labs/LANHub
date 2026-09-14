@@ -8,19 +8,26 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# APP_KEY must already be set before the container ever starts — this
-# entrypoint deliberately never tries to write it into .env itself.
-# .env is usually a single-file bind mount from the host, and on at
-# least one real host, even a --privileged root container was denied
-# write access to it (host-level restriction, not a LANHub bug) — rather
-# than depend on that working everywhere, generate the key up front with
-# `docker compose run --rm hub php artisan key:generate --show` (which
-# only prints, never writes) and paste it into .env yourself. See README.
+# If APP_KEY is missing, try to write one via Laravel's own key:generate
+# (which rewrites .env in place through PHP's normal file I/O, not a
+# shell sed -i that could swap out the file's inode) — this is what most
+# hosts need, and fixes a real first-deploy crash-loop where a user
+# never ran the manual key-generation step. On at least one real host,
+# though, even a --privileged root container was denied write access to
+# a bind-mounted .env (host-level restriction, never fully explained) —
+# if that happens here too, fall back to the old fail-fast instructions
+# instead of crash-looping with no explanation. See README.
 if ! grep -q '^APP_KEY=base64:' .env; then
-    echo "APP_KEY is missing from .env. Generate one without starting the app:" >&2
-    echo "    docker compose run --rm hub php artisan key:generate --show" >&2
-    echo "...and paste the result into hub/.env as APP_KEY=, then start the container again." >&2
-    exit 1
+    if php artisan key:generate --force >/dev/null 2>&1 && grep -q '^APP_KEY=base64:' .env; then
+        echo "No APP_KEY was set — generated one and wrote it to .env."
+    else
+        echo "APP_KEY is missing from .env, and this container could not write one" >&2
+        echo "automatically (this happens on some hosts where a bind-mounted .env" >&2
+        echo "isn't writable from inside the container). Generate one yourself:" >&2
+        echo "    docker compose run --rm hub php artisan key:generate --show" >&2
+        echo "...and paste the result into .env as APP_KEY=, then start the container again." >&2
+        exit 1
+    fi
 fi
 
 # DB_DATABASE (see .env.example) points here, deliberately outside
@@ -44,6 +51,13 @@ php artisan migrate --force
 # --stop-when-empty + the outer loop keeps a crashed/finished worker from
 # staying dead instead of a long-lived `queue:work` process.
 (while true; do php artisan queue:work --stop-when-empty --tries=1 >> /dev/null 2>&1; sleep 2; done) &
+
+# Lets the port nginx actually listens on be set via a PORT env var
+# (defaults to 8000) instead of being baked into the image — needed for
+# platforms (Dokploy, etc.) that route to a specific container-internal
+# port rather than just remapping the host side of a `ports:` mapping.
+export PORT="${PORT:-8000}"
+envsubst '${PORT}' < /etc/nginx/nginx.conf.template > /etc/nginx/sites-enabled/default
 
 php-fpm -D
 exec nginx -g "daemon off;"

@@ -91,6 +91,14 @@ Log in at the URL you set in `APP_URL`, then go to **Settings** and
 configure SMTP so invites, login codes, and password resets actually get
 delivered.
 
+**Using a different port?** If you just want the hub reachable on a
+different *host* port, change the left-hand side of `docker-compose.yml`'s
+`ports:` mapping (e.g. `"8949:8000"`) — nothing else needs to change. Some
+platforms (Dokploy and similar) instead route to a specific
+container-internal port; for that, set the `PORT` environment variable in
+`docker-compose.yml` and update the container side (right-hand side) of
+the `ports:` mapping to match.
+
 ### 2. Install an agent on each machine you want to browse
 
 See `agent/README.md`. Short version: register the machine from the hub's
