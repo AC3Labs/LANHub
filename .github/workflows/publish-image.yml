@@ -1,0 +1,44 @@
+name: Publish hub image
+
+# Builds and publishes the hub's Docker image to GitHub Container
+# Registry on every push to main that touches hub/ — this is what makes
+# the root docker-compose.yml deployable on any docker-compose-driven
+# platform (Dokploy, Portainer, Coolify, plain `docker compose up`)
+# without needing the repo checked out: it just pulls the image.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hub/**'
+      - '.github/workflows/publish-image.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./hub
+          push: true
+          # Hardcoded lowercase — GHCR image names must be lowercase, and
+          # ${{ github.repository_owner }} would resolve to "AC3Labs".
+          tags: |
+            ghcr.io/ac3labs/lanhub:latest
+            ghcr.io/ac3labs/lanhub:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

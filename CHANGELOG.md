@@ -3,6 +3,20 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.5.0] - 2026-09-14
+
+### Fixed
+- `docker-compose.yml` used `build: ./hub`, which only works if the
+  whole repo is already checked out next to the compose file — broke
+  outright on Dokploy (reported: "unable to prepare context... not
+  found") and would break equally on Portainer/Coolify/any platform
+  that only fetches the compose file itself. `.github/workflows/
+  publish-image.yml` now publishes the hub's image to
+  `ghcr.io/ac3labs/lanhub` on every push to `main` that touches `hub/`,
+  and `docker-compose.yml` pulls that instead of building locally — a
+  root-level `.env.example` replaces the old `hub/.env.example`
+  reference for this flow.
+
 ## [0.5.4.0] - 2026-09-13
 
 ### Changed

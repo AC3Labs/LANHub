@@ -1,15 +1,21 @@
 services:
   hub:
-    build: ./hub
+    # Prebuilt and published by .github/workflows/publish-image.yml on
+    # every push to main — this file works standalone, on any
+    # docker-compose-driven platform (Dokploy, Portainer, Coolify, plain
+    # `docker compose up`), with no repo checkout needed. If you're
+    # working from a full clone and want to build your own image instead
+    # (e.g. testing a local change), swap this line for `build: ./hub`.
+    image: ghcr.io/ac3labs/lanhub:latest
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
-      # Your own .env (copy hub/.env.example -> hub/.env first and fill
-      # it in) — bind-mounted as a single file so it survives rebuilds.
-      - ./hub/.env:/var/www/html/.env
+      # Your own .env (copy .env.example -> .env first and fill it in) —
+      # bind-mounted as a single file so it survives image updates.
+      - ./.env:/var/www/html/.env
       # Deliberately NOT the whole database/ directory — that would hide
-      # the image's own database/migrations/ folder on every rebuild and
+      # the image's own database/migrations/ folder on every update and
       # new migrations would silently never run. Only the sqlite file
       # itself needs to persist.
       - hub_db:/var/www/html/storage/db
