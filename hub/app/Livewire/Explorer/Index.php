@@ -49,6 +49,13 @@ class Index extends Component
     /** @var array<int, array{machine_name: string, machine_color: string, reason: string}> */
     public array $globalFailures = [];
 
+    /** @var array<int, array{id: int, name: string}> machines still left to search, front-to-back */
+    public array $globalQueue = [];
+
+    public bool $globalSearching = false;
+
+    public bool $globalTruncated = false;
+
     public function mount(): void
     {
         $machines = Machine::accessibleTo(Auth::user())->orderBy('sort_order')->orderBy('name')->get();
@@ -363,14 +370,14 @@ class Index extends Component
     }
 
     /**
-     * Searches every machine the user has access to, one drive/root at a
-     * time via the same agent search() used per-pane above — there's still
-     * no index, so this is just that same bounded walk run once per drive
-     * per machine. A machine that's offline or errors is skipped rather
-     * than failing the whole search, since the point is "where is this
-     * file", not "prove every machine is reachable."
+     * Kicks off a cross-machine search — the browser calls this once, then
+     * calls searchNextMachine() in a loop (one real Livewire round-trip
+     * per machine) until $globalQueue is empty. Split this way, instead of
+     * one method looping over every machine server-side, so "Searching
+     * ASUS Studio…" reflects an actual in-flight request to that machine
+     * rather than a client-side timer with no relation to real progress.
      */
-    public function searchEverywhere(): void
+    public function startGlobalSearch(): void
     {
         $query = trim($this->globalQuery);
         $this->globalSearched = true;
@@ -383,59 +390,94 @@ class Index extends Component
 
         $this->globalResults = [];
         $this->globalFailures = [];
-        $truncated = false;
+        $this->globalTruncated = false;
+        $this->globalSearching = true;
 
-        foreach (Machine::accessibleTo(Auth::user())->orderBy('name')->get() as $machine) {
+        $this->globalQueue = Machine::accessibleTo(Auth::user())
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Machine $m) => ['id' => $m->id, 'name' => $m->name])
+            ->all();
+    }
+
+    /**
+     * Searches every drive/root on the single machine at the front of the
+     * queue — same bounded walk as the per-pane search above, there's
+     * still no index. A machine that's offline or errors is skipped
+     * rather than failing the whole search, since the point is "where is
+     * this file", not "prove every machine is reachable."
+     */
+    public function searchNextMachine(): void
+    {
+        $next = array_shift($this->globalQueue);
+
+        if (! $next) {
+            $this->globalSearching = false;
+
+            return;
+        }
+
+        $machine = Machine::find($next['id']);
+
+        if ($machine && Auth::user()->canAccess($machine)) {
+            $this->searchOneMachine($machine, trim($this->globalQuery));
+        }
+
+        if ($this->globalQueue === []) {
+            $this->globalSearching = false;
+            $this->globalError = $this->globalTruncated
+                ? 'Showing partial results — the search hit its limit on at least one machine.'
+                : null;
+        }
+    }
+
+    private function searchOneMachine(Machine $machine, string $query): void
+    {
+        try {
+            $drives = $machine->agent()->drives();
+        } catch (AgentException|ConnectionException $e) {
+            $this->globalFailures[] = [
+                'machine_name' => $machine->name,
+                'machine_color' => $machine->color,
+                'reason' => $e->getMessage(),
+            ];
+
+            return;
+        }
+
+        $machineFailed = false;
+
+        foreach ($drives as $drive) {
             try {
-                $drives = $machine->agent()->drives();
+                $result = $machine->agent()->search($drive['path'], $query);
             } catch (AgentException|ConnectionException $e) {
-                $this->globalFailures[] = [
-                    'machine_name' => $machine->name,
-                    'machine_color' => $machine->color,
-                    'reason' => $e->getMessage(),
-                ];
+                if (! $machineFailed) {
+                    $this->globalFailures[] = [
+                        'machine_name' => $machine->name,
+                        'machine_color' => $machine->color,
+                        'reason' => $e->getMessage(),
+                    ];
+                    $machineFailed = true;
+                }
 
                 continue;
             }
 
-            $machineFailed = false;
+            $this->globalTruncated = $this->globalTruncated || $result['truncated'];
 
-            foreach ($drives as $drive) {
-                try {
-                    $result = $machine->agent()->search($drive['path'], $query);
-                } catch (AgentException|ConnectionException $e) {
-                    if (! $machineFailed) {
-                        $this->globalFailures[] = [
-                            'machine_name' => $machine->name,
-                            'machine_color' => $machine->color,
-                            'reason' => $e->getMessage(),
-                        ];
-                        $machineFailed = true;
-                    }
-
-                    continue;
-                }
-
-                $truncated = $truncated || $result['truncated'];
-
-                foreach ($result['entries'] as $entry) {
-                    $this->globalResults[] = [
-                        'machine_id' => $machine->id,
-                        'machine_name' => $machine->name,
-                        'machine_color' => $machine->color,
-                        'path' => $entry['path'],
-                        'name' => $entry['name'],
-                        'type' => $entry['type'],
-                        'size' => $entry['size'] ?? null,
-                        'modified' => $entry['modified'] ?? null,
-                    ];
-                }
+            foreach ($result['entries'] as $entry) {
+                $this->globalResults[] = [
+                    'machine_id' => $machine->id,
+                    'machine_name' => $machine->name,
+                    'machine_color' => $machine->color,
+                    'path' => $entry['path'],
+                    'name' => $entry['name'],
+                    'type' => $entry['type'],
+                    'size' => $entry['size'] ?? null,
+                    'modified' => $entry['modified'] ?? null,
+                ];
             }
         }
-
-        $this->globalError = $truncated
-            ? 'Showing partial results — the search hit its limit on at least one machine.'
-            : null;
     }
 
     public function clearGlobalSearch(): void
@@ -445,6 +487,9 @@ class Index extends Component
         $this->globalError = null;
         $this->globalSearched = false;
         $this->globalFailures = [];
+        $this->globalQueue = [];
+        $this->globalSearching = false;
+        $this->globalTruncated = false;
     }
 
     /**

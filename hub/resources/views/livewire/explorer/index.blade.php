@@ -61,6 +61,15 @@
             this.previewUrl = null;
             this.previewName = null;
         },
+        currentlySearching: null,
+        async runGlobalSearch() {
+            await $wire.startGlobalSearch();
+            while ($wire.globalQueue.length > 0) {
+                this.currentlySearching = $wire.globalQueue[0].name;
+                await $wire.searchNextMachine();
+            }
+            this.currentlySearching = null;
+        },
     }"
 >
     <div x-show="previewUrl" x-cloak class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6" x-on:click.self="closePreview()">
@@ -83,20 +92,19 @@
             </div>
 
             @if ($machines->isNotEmpty())
-                <form wire:submit="searchEverywhere" class="flex items-center gap-1.5 px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg w-full sm:w-[26rem]" wire:target="searchEverywhere">
-                    <svg wire:loading.remove wire:target="searchEverywhere" class="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <svg wire:loading wire:target="searchEverywhere" class="w-3.5 h-3.5 text-tan-500 shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <form x-on:submit.prevent="runGlobalSearch()" class="flex items-center gap-1.5 px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg w-full sm:w-[26rem]">
+                    <svg x-show="!currentlySearching" class="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <svg x-show="currentlySearching" x-cloak class="w-3.5 h-3.5 text-tan-500 shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <input
                         type="text"
                         wire:model="globalQuery"
-                        wire:loading.attr="disabled"
-                        wire:target="searchEverywhere"
+                        x-bind:disabled="currentlySearching !== null"
                         placeholder="Search for a file on any machine connected to LANHub"
                         class="flex-1 text-sm border-0 focus:ring-0 p-0 bg-transparent placeholder:text-stone-400 disabled:text-stone-400"
                     >
-                    <span wire:loading wire:target="searchEverywhere" class="text-xs text-tan-600 shrink-0">Searching&hellip;</span>
+                    <span x-show="currentlySearching" x-cloak x-text="'Searching ' + currentlySearching + '…'" class="text-xs text-tan-600 shrink-0 truncate max-w-[9rem]"></span>
                     @if ($globalSearched)
-                        <button type="button" wire:click="clearGlobalSearch" wire:loading.remove wire:target="searchEverywhere" class="text-xs text-stone-400 hover:text-stone-600 shrink-0">Clear</button>
+                        <button type="button" wire:click="clearGlobalSearch" x-show="!currentlySearching" class="text-xs text-stone-400 hover:text-stone-600 shrink-0">Clear</button>
                     @endif
                 </form>
             @endif

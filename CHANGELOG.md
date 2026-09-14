@@ -3,6 +3,18 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.8.0] - 2026-09-14
+
+### Changed
+- Cross-machine search now shows real per-machine progress ("Searching
+  ASUS Studio…") instead of one opaque spinner for the whole run.
+  `searchEverywhere()` was split into `startGlobalSearch()` (builds the
+  queue) and `searchNextMachine()` (searches one machine), driven by a
+  browser-side loop that awaits one real Livewire round-trip per
+  machine — the label reflects an actual in-flight request to that
+  machine, not a client-side timer, and a slow/unresponsive machine
+  visibly takes longer instead of being hidden behind a generic spinner.
+
 ## [0.5.7.0] - 2026-09-14
 
 ### Fixed
