@@ -324,7 +324,7 @@
                                         @foreach ($entries as $entry)
                                             <tr
                                                 wire:key="entry-{{ $pane['id'] }}-{{ $entry['path'] }}"
-                                                x-data="{ menu: false }"
+                                                x-data="{ menu: false, menuX: 0, menuY: 0 }"
                                                 draggable="{{ $entry['type'] === 'drive' ? 'false' : 'true' }}"
                                                 x-on:dragstart="startDrag($event, '{{ $pane['id'] }}', '{{ addslashes($entry['path']) }}', '{{ addslashes($entry['name']) }}', '{{ $entry['type'] }}')"
                                                 x-on:dragend="endDrag()"
@@ -333,7 +333,7 @@
                                                     x-on:dragleave.stop="dropTarget === '{{ addslashes($entry['path']) }}' && (dropTarget = null)"
                                                     x-on:drop.prevent.stop="handleDrop($event, '{{ $pane['id'] }}', '{{ addslashes($entry['path']) }}')"
                                                 @endif
-                                                x-on:contextmenu.prevent="menu = true"
+                                                x-on:contextmenu.prevent="menu = true; menuX = Math.min($event.clientX, window.innerWidth - 170); menuY = Math.min($event.clientY, window.innerHeight - 150)"
                                                 :style="dropTarget === '{{ addslashes($entry['path']) }}' ? 'background-color: {{ $machine?->color }}1f' : ''"
                                                 class="relative border-b border-stone-50 hover:bg-stone-50/80 group"
                                             >
@@ -366,10 +366,10 @@
                                                     {{ $entry['size'] !== null ? human_filesize($entry['size']) : '—' }}
                                                 </td>
                                                 <td class="px-3 py-2 text-right relative">
-                                                    <button x-on:click="menu = !menu" class="p-1 rounded hover:bg-stone-200 text-stone-400 opacity-0 group-hover:opacity-100 transition">
+                                                    <button x-on:click="menu = !menu; menuX = Math.min($event.clientX, window.innerWidth - 170); menuY = Math.min($event.clientY, window.innerHeight - 150)" class="p-1 rounded hover:bg-stone-200 text-stone-400 opacity-0 group-hover:opacity-100 transition">
                                                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg>
                                                     </button>
-                                                    <div x-show="menu" @click.outside="menu = false" x-transition style="display:none" class="absolute right-2 top-8 w-40 bg-paper rounded-lg shadow-panel ring-1 ring-stone-200 py-1 z-30 text-left">
+                                                    <div x-show="menu" @click.outside="menu = false" x-transition x-cloak :style="'top: ' + menuY + 'px; left: ' + menuX + 'px;'" class="fixed w-40 bg-paper rounded-lg shadow-panel ring-1 ring-stone-200 py-1 z-40 text-left">
                                                         @if ($entry['type'] === 'file')
                                                             <button x-on:click="openPreview({{ $pane['machine_id'] }}, '{{ addslashes($entry['path']) }}', '{{ addslashes($entry['name']) }}'); menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Preview</button>
                                                             <button wire:click="downloadEntry('{{ $pane['id'] }}', '{{ addslashes($entry['path']) }}')" x-on:click="menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Download</button>

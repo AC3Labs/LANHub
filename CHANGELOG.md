@@ -3,6 +3,16 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.9.0] - 2026-09-14
+
+### Fixed
+- Right-clicking a file/folder in Explorer opened its context menu
+  anchored to the row's kebab-menu button (CSS `absolute`), not the
+  cursor — on a wide row or a pane near the screen edge, the menu could
+  render off-screen entirely. It's now `fixed`-positioned at the actual
+  click/right-click coordinates (clamped to stay on-screen), which also
+  stops it from being clipped by a scrolled pane's overflow.
+
 ## [0.5.8.0] - 2026-09-14
 
 ### Changed
