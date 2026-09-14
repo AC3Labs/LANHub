@@ -15,7 +15,7 @@ same HTTP contract so the hub's code never branches on OS.
 - All request/response bodies are JSON except `/api/download` (raw bytes) and
   `/api/upload` (multipart form).
 - Paths are always **absolute, native paths** for that machine's OS
-  (`C:\Users\andrew\Documents` or `/home/andrew/projects`). The hub never
+  (`C:\Users\jsmith\Documents` or `/home/jsmith/projects`). The hub never
   tries to normalize across OSes — it just displays what the agent reports.
 
 ## Endpoints
@@ -38,9 +38,9 @@ Returns the root volumes to seed the file tree.
 ### `GET /api/list?path=...`
 Lists one directory (non-recursive).
 ```json
-{ "path": "C:\\Users\\andrew", "entries": [
-  { "name": "Documents", "path": "C:\\Users\\andrew\\Documents", "type": "dir", "size": null, "modified": "2026-09-01T12:00:00Z", "hidden": false },
-  { "name": "notes.txt", "path": "C:\\Users\\andrew\\notes.txt", "type": "file", "size": 4821, "modified": "2026-09-05T08:30:00Z", "hidden": false }
+{ "path": "C:\\Users\\jsmith", "entries": [
+  { "name": "Documents", "path": "C:\\Users\\jsmith\\Documents", "type": "dir", "size": null, "modified": "2026-09-01T12:00:00Z", "hidden": false },
+  { "name": "notes.txt", "path": "C:\\Users\\jsmith\\notes.txt", "type": "file", "size": 4821, "modified": "2026-09-05T08:30:00Z", "hidden": false }
 ]}
 ```
 
@@ -52,7 +52,7 @@ Fields: `path` (destination directory), `file` (the uploaded blob). Writes the
 file into that directory using its original filename.
 
 ### `POST /api/mkdir`
-Body: `{ "path": "C:\\Users\\andrew\\New Folder" }`
+Body: `{ "path": "C:\\Users\\jsmith\\New Folder" }`
 
 ### `POST /api/rename`
 Body: `{ "path": "...", "new_name": "renamed.txt" }` — renames in place, same directory.
@@ -74,7 +74,7 @@ system — this walks the filesystem live on every call. `max_depth`
 (default 10) all cap the walk; hitting any of them returns whatever was
 found so far with `truncated: true` rather than an error.
 ```json
-{ "path": "C:\\Users\\andrew", "query": "invoice", "entries": [ /* same shape as /api/list entries */ ], "truncated": false }
+{ "path": "C:\\Users\\jsmith", "query": "invoice", "entries": [ /* same shape as /api/list entries */ ], "truncated": false }
 ```
 
 ### Transfer queue
@@ -99,7 +99,7 @@ trail — every request is logged except the once-a-minute `/api/health`
 poll. Not persisted anywhere else; this is a read of the same rotating
 log file the agent writes to disk.
 ```json
-{ "entries": [ { "time": "...", "method": "GET", "path": "/api/list?path=C:\\Users", "status": 200, "client": "192.168.0.10" } ] }
+{ "entries": [ { "time": "...", "method": "GET", "path": "/api/list?path=C:\\Users", "status": 200, "client": "192.168.1.10" } ] }
 ```
 
 ### `GET /api/preview?path=`

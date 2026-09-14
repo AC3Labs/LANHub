@@ -90,7 +90,7 @@
 
                 <div>
                     <x-input-label for="sourcePath" value="Source path" />
-                    <x-text-input id="sourcePath" wire:model="sourcePath" class="mt-1 block w-full font-mono text-sm" placeholder="/home/andrew/Photos" />
+                    <x-text-input id="sourcePath" wire:model="sourcePath" class="mt-1 block w-full font-mono text-sm" placeholder="/home/jsmith/Photos" />
                     <x-input-error :messages="$errors->get('sourcePath')" class="mt-1" />
                 </div>
 

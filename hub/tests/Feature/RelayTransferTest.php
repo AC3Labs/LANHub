@@ -38,10 +38,10 @@ class RelayTransferTest extends TestCase
         $component->call(
             'handleInternalDrop',
             $sourcePaneId,
-            '/home/andrew/notes.txt',
+            '/home/jsmith/notes.txt',
             'notes.txt',
             $destPaneId,
-            'C:\\Users\\andrew',
+            'C:\\Users\\jsmith',
             true,
         );
 

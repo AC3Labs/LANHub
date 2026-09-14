@@ -43,9 +43,13 @@ All fields live in `config.json` (see `config.example.json`):
 Requires Go 1.22+. From this directory:
 
 ```
-go build -o dist/lanhub-agent-linux-amd64 .
-GOOS=windows GOARCH=amd64 go build -o dist/lanhub-agent-windows-amd64.exe .
+go build -trimpath -o dist/lanhub-agent-linux-amd64 .
+GOOS=windows GOARCH=amd64 go build -trimpath -o dist/lanhub-agent-windows-amd64.exe .
 ```
+
+`-trimpath` strips the local build machine's file paths out of the
+compiled binary (Go otherwise embeds them for stack traces) — keep it
+on any rebuild you intend to distribute.
 
 The only external package is `golang.org/x/sys`, used for native Windows
 Service support (`service_windows.go`) — everything else is standard
