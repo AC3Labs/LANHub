@@ -23,7 +23,8 @@ across Windows and Linux.
   and email-based two-factor login.
 - Disk-space monitoring and online/offline alerting via a free ntfy.sh
   push notification.
-- An activity log and dark mode.
+- An activity log, a per-machine agents page (live health, transfer
+  throughput, and a transfer log), and dark mode.
 - Optional HTTPS between the hub and each agent (self-signed, generated
   by the install scripts).
 
@@ -33,9 +34,10 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 
 - **`hub/`** — a Laravel + Livewire web app. This is what you open in a
   browser. Runs in Docker.
-- **`agent/`** — a small Python (FastAPI) service, one per machine you
-  want to browse. Runs natively (not in Docker) so it has direct access
-  to that machine's real filesystem — see `agent/README.md`.
+- **`agent/`** — a small Go service, one per machine you want to browse.
+  Compiles to a single static binary (no runtime to install) and runs
+  natively (not in Docker) so it has direct access to that machine's
+  real filesystem — see `agent/README.md`.
 
 ## Requirements
 
