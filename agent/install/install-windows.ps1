@@ -1,15 +1,11 @@
-# Installs the LANHub agent as a proper Windows Service (via NSSM) —
-# auto-starts at boot, restarts itself if the process ever exits for any
-# reason (crash, kill, whatever), and rotates its own log file. Run as
-# Administrator. Requires Python 3.11+ on PATH.
-#
-# Replaces the earlier Scheduled Task approach (kept working, but had no
-# restart policy — if the agent process died after boot for any reason,
-# it stayed dead until the next full reboot). A real Windows Service's
-# Recovery/AppExit behavior is the correct fix, not a bigger hack on top
-# of Scheduled Tasks.
-#
-# Pass -Tls to also generate a self-signed cert and enable HTTPS.
+# Installs the LANHub agent as a native Windows Service — no NSSM or any
+# other third-party service wrapper. The agent registers and manages
+# itself (`lanhub-agent.exe install`), which is more robust than
+# depending on an extra tool: NSSM itself got blocked outright by an
+# Application Control policy on real hardware during rollout, and a
+# wrapper program is one more thing that can be blocked or go missing.
+# Run as Administrator. Pass -Tls to also generate a self-signed cert
+# and enable HTTPS.
 
 param(
     [switch]$Tls
@@ -21,8 +17,6 @@ $InstallDir = "C:\LANHub-Agent"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-Copy-Item "$ScriptDir\..\agent.py" "$InstallDir\agent.py" -Force
-Copy-Item "$ScriptDir\..\requirements.txt" "$InstallDir\requirements.txt" -Force
 
 $ConfigWasFresh = $false
 if (-not (Test-Path "$InstallDir\config.json")) {
@@ -68,56 +62,33 @@ try {
         Write-Warning "Windows Defender Tamper Protection is ON. The exclusion this script just added may not stick (silently reverts under Tamper Protection). If the agent later hangs at startup with zero output, this is almost certainly why — see README's Windows troubleshooting section. Add the exclusion manually via Windows Security > Virus & threat protection settings instead."
     }
     Add-MpPreference -ExclusionPath $InstallDir -ErrorAction SilentlyContinue
-    Add-MpPreference -ExclusionProcess "python.exe" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionProcess "lanhub-agent.exe" -ErrorAction SilentlyContinue
 } catch {
     Write-Warning "Could not check/set Windows Defender exclusions (Get-MpComputerStatus/Add-MpPreference failed) — this is fine if Defender isn't the active AV on this machine, otherwise add an exclusion for $InstallDir manually if the agent hangs at startup."
 }
 
-python -m venv "$InstallDir\.venv"
-& "$InstallDir\.venv\Scripts\pip.exe" install --quiet -r "$InstallDir\requirements.txt"
-
 New-NetFirewallRule -DisplayName "LANHub Agent" -Direction Inbound -Protocol TCP -LocalPort 8765 -Action Allow -Profile Any -ErrorAction SilentlyContinue | Out-Null
 
-# --- NSSM service install ------------------------------------------------
-if (-not (Get-Command nssm -ErrorAction SilentlyContinue)) {
-    if (Get-Command choco -ErrorAction SilentlyContinue) {
-        Write-Host "Installing NSSM via Chocolatey..."
-        choco install nssm -y | Out-Null
-    } else {
-        throw "nssm.exe not found and Chocolatey isn't installed. Install NSSM (https://nssm.cc/) or Chocolatey first, then re-run this script."
-    }
+# --- Migrate a previous NSSM-based install, if one exists ----------------
+$existing = Get-Service LANHubAgent -ErrorAction SilentlyContinue
+if ($existing) {
+    Write-Host "Removing previous LANHubAgent service registration..."
+    Stop-Service LANHubAgent -ErrorAction SilentlyContinue
+    Get-Process lanhub-agent -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    sc.exe delete LANHubAgent | Out-Null
+    Start-Sleep -Seconds 1
 }
 
-# Clean up a previous Scheduled-Task-based install if one exists, so a
-# re-run of this script on an older install migrates cleanly instead of
-# running two copies of the agent at once.
-schtasks /query /tn "LANHubAgent" 2>$null | Out-Null
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Removing old Scheduled Task install..."
-    schtasks /end /tn "LANHubAgent" 2>$null | Out-Null
-    schtasks /delete /tn "LANHubAgent" /f 2>$null | Out-Null
-}
-Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
+Copy-Item "$ScriptDir\..\dist\lanhub-agent-windows-amd64.exe" "$InstallDir\lanhub-agent.exe" -Force
 
-nssm remove LANHubAgent confirm 2>$null | Out-Null
-nssm install LANHubAgent "$InstallDir\.venv\Scripts\python.exe" "agent.py"
-nssm set LANHubAgent AppDirectory $InstallDir
-nssm set LANHubAgent AppStdout "$InstallDir\task.log"
-nssm set LANHubAgent AppStderr "$InstallDir\task.log"
-nssm set LANHubAgent AppRotateFiles 1
-nssm set LANHubAgent AppRotateBytes 10485760
-nssm set LANHubAgent Start SERVICE_AUTO_START
-# AppExit Default Restart = always restart the process, whatever its exit
-# code — a clean exit shouldn't leave the agent down any more than a crash
-# should. AppRestartDelay/AppThrottle keep a crash-loop from spinning hot.
-nssm set LANHubAgent AppExit Default Restart
-nssm set LANHubAgent AppRestartDelay 3000
-nssm set LANHubAgent AppThrottle 3000
-
-Start-Service LANHubAgent
+Push-Location $InstallDir
+& .\lanhub-agent.exe install
+Pop-Location
 
 Write-Host ""
-Write-Host "Installed as a Windows Service (LANHubAgent) — auto-starts at boot, restarts itself on any exit."
+Write-Host "Installed as a native Windows Service (LANHubAgent) — auto-starts at boot, restarts itself on any exit."
 Write-Host "Edit $InstallDir\config.json with a real token, then: Restart-Service LANHubAgent"
 Write-Host "Check status any time with: Get-Service LANHubAgent"
+Write-Host "Uninstall with: $InstallDir\lanhub-agent.exe uninstall (after Stop-Service LANHubAgent)"

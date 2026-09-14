@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Installs the LANHub agent as a systemd service on Ubuntu/Debian.
+# The agent itself is a single static binary — nothing else to install.
 # Pass --tls to also generate a self-signed cert and enable HTTPS.
 set -euo pipefail
 
@@ -12,13 +13,15 @@ for arg in "$@"; do
     esac
 done
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 sudo mkdir -p "$INSTALL_DIR"
-sudo cp "$(dirname "$0")/../agent.py" "$INSTALL_DIR/agent.py"
-sudo cp "$(dirname "$0")/../requirements.txt" "$INSTALL_DIR/requirements.txt"
+sudo cp "$SCRIPT_DIR/../dist/lanhub-agent-linux-amd64" "$INSTALL_DIR/lanhub-agent"
+sudo chmod +x "$INSTALL_DIR/lanhub-agent"
 
 CONFIG_FRESH=false
 if [ ! -f "$INSTALL_DIR/config.json" ]; then
-    sudo cp "$(dirname "$0")/../config.example.json" "$INSTALL_DIR/config.json"
+    sudo cp "$SCRIPT_DIR/../config.example.json" "$INSTALL_DIR/config.json"
     echo "Wrote default config to $INSTALL_DIR/config.json — edit the token before starting the service."
     CONFIG_FRESH=true
 fi
@@ -49,10 +52,9 @@ PYEOF
     fi
 fi
 
-sudo python3 -m venv "$INSTALL_DIR/.venv"
-sudo "$INSTALL_DIR/.venv/bin/pip" install --quiet -r "$INSTALL_DIR/requirements.txt"
+sudo chown -R "$SERVICE_USER" "$INSTALL_DIR"
 
-sudo sed "s/%i/${SERVICE_USER}/" "$(dirname "$0")/lanhub-agent.service" | sudo tee /etc/systemd/system/lanhub-agent.service > /dev/null
+sudo sed "s/%i/${SERVICE_USER}/" "$SCRIPT_DIR/lanhub-agent.service" | sudo tee /etc/systemd/system/lanhub-agent.service > /dev/null
 
 sudo systemctl daemon-reload
 sudo systemctl enable lanhub-agent

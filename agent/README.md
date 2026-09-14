@@ -1,24 +1,29 @@
 # LANHub Agent
 
-Runs on every machine you want to browse from the LANHub web app. Same code
-on Windows and Linux — see `../docs/AGENT_API.md` for the API it exposes.
+Runs on every machine you want to browse from the LANHub web app. A single
+static binary — no runtime, no dependencies to install — same code on
+Windows and Linux. See `../docs/AGENT_API.md` for the API it exposes.
 
 ## Setup
 
-1. Install Python 3.11+.
-2. Copy `config.example.json` to `config.json` and set a long random `token`
+1. Copy `config.example.json` to `config.json` and set a long random `token`
    (this must match the token you enter for this machine in the LANHub hub).
-3. Install as a background service:
+2. Install as a background service:
    - **Linux:** `sudo install/install-linux.sh` (add `--tls` to also
      generate a self-signed cert and enable HTTPS).
    - **Windows (as Administrator):** `install/install-windows.ps1` —
-     installs as a real Windows Service via NSSM (auto-starts at boot,
-     restarts itself on any exit). Add `-Tls` to also generate a
-     self-signed cert (requires `openssl` on `PATH`, e.g. via
-     `choco install openssl`) and enable HTTPS.
-4. Start the service, then register the machine in the hub with this
+     the binary registers itself as a native Windows Service (no NSSM or
+     any other wrapper — auto-starts at boot, restarts itself on any
+     exit). Add `-Tls` to also generate a self-signed cert (requires
+     `openssl` on `PATH`, e.g. via `choco install openssl`) and enable
+     HTTPS.
+3. Start the service, then register the machine in the hub with this
    machine's LAN IP and port `8765` (check "Use HTTPS" too if you passed
    `--tls`/`-Tls`).
+
+Prebuilt binaries for both platforms live in `dist/` — the install scripts
+copy the right one automatically. Nothing else needs to be installed on
+the target machine.
 
 ## Config reference
 
@@ -33,11 +38,49 @@ All fields live in `config.json` (see `config.example.json`):
 | `throttle_kbps` | `0` (unlimited) | Soft bandwidth cap for downloads/uploads/transfer-queue jobs. |
 | `cert_file` / `key_file` | unset | PEM cert/key pair to serve HTTPS instead of plain HTTP. |
 
+## Building from source
+
+Requires Go 1.22+. From this directory:
+
+```
+go build -o dist/lanhub-agent-linux-amd64 .
+GOOS=windows GOARCH=amd64 go build -o dist/lanhub-agent-windows-amd64.exe .
+```
+
+The only external package is `golang.org/x/sys`, used for native Windows
+Service support (`service_windows.go`) — everything else is standard
+library.
+
+## Windows service management
+
+On Windows the binary manages its own service registration — no NSSM or
+any other wrapper:
+
+```
+lanhub-agent.exe install     # registers + starts the service (auto-restart on any failure)
+lanhub-agent.exe uninstall   # stops + removes it
+lanhub-agent.exe start
+lanhub-agent.exe stop
+```
+
+`install-windows.ps1` calls `install` for you and migrates a previous
+NSSM-based install automatically if one exists.
+
 ## Windows troubleshooting
 
-Two real issues came up installing this on actual Windows machines — both
-worth knowing before you assume something's broken:
+Two real issues came up installing this on actual Windows machines, worth
+knowing before you assume something's broken:
 
+- **`nssm.exe` (or any third-party service wrapper) gets blocked outright
+  by an Application Control policy** (`Program 'nssm.exe' failed to run:
+  An Application Control policy has blocked this file`), even run
+  directly with no arguments. Hit on real hardware — the policy targeted
+  `nssm.exe` specifically, not arbitrary unsigned executables (the agent
+  binary itself ran fine). This is exactly why the agent now manages its
+  own Windows service registration instead of depending on NSSM — if this
+  still comes up, it means something is now blocking the agent binary
+  itself, not a wrapper tool, and needs an actual Application Control /
+  WDAC / Smart App Control exception on that machine.
 - **The agent process starts but never binds its port, with zero error
   output, seemingly forever.** This was traced (on real hardware) to
   Windows Defender's real-time protection getting into a bad state — its
@@ -49,19 +92,10 @@ worth knowing before you assume something's broken:
   on managed/"Endpoint Protection"-branded Defender setups — the exclusion
   list can silently revert. **A full reboot of the affected machine
   resolved it** every time this came up; there was no clean way to fix it
-  purely via remote PowerShell when Tamper Protection is active. If an
-  agent hangs like this, don't spend long debugging the Python code —
-  check `Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational"`
+  purely via remote PowerShell when Tamper Protection is active. If the
+  agent hangs like this, check
+  `Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational"`
   for filter driver errors first, and try a reboot.
-- **A Scheduled Task with an "At log on" trigger silently fails
-  (`Last Result: 1`) if nobody is actually logged into an interactive
-  session** (checkable with `query user` — "No User exists for *" means
-  nobody's logged in). This is normal for a machine that reboots and sits
-  at a lock screen. **Use an "At startup" trigger running as `SYSTEM`
-  instead** — that doesn't need any interactive session and is what
-  `install-windows.ps1` does. A `.bat` wrapper redirecting
-  `python.exe agent.py >> task.log 2>&1` (rather than pointing the task
-  straight at `pythonw.exe`) makes failures visible instead of silent.
 - If you're setting this up **by SSHing in from another machine** (rather
   than at the physical keyboard): Windows' native OpenSSH server ties every
   child process it spawns to that SSH session's Job Object, and kills the
@@ -72,17 +106,18 @@ worth knowing before you assume something's broken:
   whether something works, either keep the SSH command running in the
   foreground while you check it from a second connection, or trigger it
   through a mechanism Windows itself manages independently of your SSH
-  session (Scheduled Tasks, a real reboot) — don't trust a `schtasks /run`
-  or similar fired *through* an SSH one-liner as proof it will behave the
+  session (the Windows service, a real reboot) — don't trust a one-off
+  process launched *through* an SSH one-liner as proof it will behave the
   same way at a real boot/logon.
 
 ## Running manually (for testing)
 
 ```
-python -m venv .venv
-.venv/bin/pip install -r requirements.txt   # .venv\Scripts\pip.exe on Windows
-.venv/bin/python agent.py
+LANHUB_AGENT_CONFIG=./config.json ./dist/lanhub-agent-linux-amd64
 ```
+
+On Windows: `dist\lanhub-agent-windows-amd64.exe` (reads `config.json`
+alongside the binary by default, or set `LANHUB_AGENT_CONFIG`).
 
 ## Security notes
 
