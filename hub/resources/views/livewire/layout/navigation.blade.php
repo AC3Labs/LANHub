@@ -42,6 +42,9 @@ new class extends Component
                     <x-nav-link :href="route('activity')" :active="request()->routeIs('activity')" wire:navigate>
                         {{ __('Activity') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('agents')" :active="request()->routeIs('agents') || request()->routeIs('agents.*')" wire:navigate>
+                        {{ __('Agents') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('sync-rules')" :active="request()->routeIs('sync-rules')" wire:navigate>
                         {{ __('Sync Rules') }}
                     </x-nav-link>
@@ -134,6 +137,9 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('activity')" :active="request()->routeIs('activity')" wire:navigate>
                 {{ __('Activity') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('agents')" :active="request()->routeIs('agents') || request()->routeIs('agents.*')" wire:navigate>
+                {{ __('Agents') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('sync-rules')" :active="request()->routeIs('sync-rules')" wire:navigate>
                 {{ __('Sync Rules') }}

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PreviewController;
+use App\Livewire\Agents\Log;
 use App\Livewire\Dashboard\Index;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,14 @@ Route::get('machines', App\Livewire\Machines\Index::class)
 Route::get('activity', App\Livewire\Activity\Index::class)
     ->middleware(['auth'])
     ->name('activity');
+
+Route::get('agents', App\Livewire\Agents\Index::class)
+    ->middleware(['auth'])
+    ->name('agents');
+
+Route::get('agents/{machine}/log', Log::class)
+    ->middleware(['auth'])
+    ->name('agents.log');
 
 Route::get('sync-rules', App\Livewire\SyncRules\Index::class)
     ->middleware(['auth'])
