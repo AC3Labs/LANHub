@@ -12,11 +12,22 @@ class RelayTransfer extends Model
         'destination_machine_id',
         'source_path',
         'destination_path',
+        'bytes_transferred',
         'kind',
         'status',
+        'started_at',
+        'completed_at',
         'error',
         'user_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
+    }
 
     public function sourceMachine(): BelongsTo
     {

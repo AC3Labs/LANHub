@@ -1,8 +1,11 @@
-<div wire:poll.2s>
+<div wire:poll.2s x-data="{ dismissed: false }">
     @if ($jobs->isNotEmpty())
-        <div class="fixed bottom-4 right-4 z-40 w-80 max-h-96 overflow-y-auto rounded-xl bg-paper shadow-panel ring-1 ring-stone-200 divide-y divide-stone-100">
-            <div class="px-4 py-2 text-xs font-semibold text-stone-500 uppercase tracking-wide bg-stone-50 rounded-t-xl">
+        <div x-show="!dismissed" x-cloak class="fixed bottom-4 right-4 z-40 w-80 max-h-96 overflow-y-auto rounded-xl bg-paper shadow-panel ring-1 ring-stone-200 divide-y divide-stone-100">
+            <div class="px-4 py-2 flex items-center justify-between text-xs font-semibold text-stone-500 uppercase tracking-wide bg-stone-50 rounded-t-xl">
                 Transfers
+                <button type="button" x-on:click="dismissed = true" aria-label="Close" class="text-stone-400 hover:text-stone-600 normal-case">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
             @foreach ($jobs as $i => $job)
                 <div wire:key="transfer-{{ $i }}" class="px-4 py-2.5 text-xs">

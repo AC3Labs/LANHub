@@ -33,16 +33,17 @@ class RelayTransferJob implements ShouldQueue
         $destination = $relay->destinationMachine;
 
         try {
-            $relay->update(['status' => 'downloading']);
+            $relay->update(['status' => 'downloading', 'started_at' => now()]);
 
             $temp = tmpfile();
             $meta = stream_get_meta_data($temp);
 
             $response = $source->agent()->download($relay->source_path);
-            fwrite($temp, $response->body());
+            $body = $response->body();
+            fwrite($temp, $body);
             rewind($temp);
 
-            $relay->update(['status' => 'uploading']);
+            $relay->update(['status' => 'uploading', 'bytes_transferred' => strlen($body)]);
 
             $uploaded = new UploadedFile(
                 $meta['uri'],
@@ -63,10 +64,10 @@ class RelayTransferJob implements ShouldQueue
 
             fclose($temp);
 
-            $relay->update(['status' => 'done']);
+            $relay->update(['status' => 'done', 'completed_at' => now()]);
         } catch (\Throwable $e) {
             Log::warning("Relay transfer #{$relay->id} failed: ".$e->getMessage());
-            $relay->update(['status' => 'error', 'error' => $e->getMessage()]);
+            $relay->update(['status' => 'error', 'error' => $e->getMessage(), 'completed_at' => now()]);
         }
     }
 }

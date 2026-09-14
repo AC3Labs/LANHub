@@ -14,14 +14,21 @@ if (! function_exists('human_filesize')) {
 
 if (! function_exists('is_previewable_image')) {
     /**
-     * Matches the image types agent/agent.py's GET /api/preview will
-     * actually stream — used by the Explorer grid to decide whether to
-     * render a real thumbnail instead of the generic file-icon.
+     * Matches the image types the agent's GET /api/preview will actually
+     * stream — used by the Explorer grid to decide whether to render a
+     * real thumbnail instead of the generic file-icon.
      */
     function is_previewable_image(string $filename): bool
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         return in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'], true);
+    }
+}
+
+if (! function_exists('human_speed')) {
+    function human_speed(float $bytesPerSecond): string
+    {
+        return human_filesize((int) round($bytesPerSecond)).'/s';
     }
 }

@@ -41,7 +41,7 @@ class Panel extends Component
                 }
             })
             ->filter(fn (array $job) => in_array($job['status'], ['pending', 'running'], true)
-                || now()->diffInSeconds($job['created_at']) < 30);
+                || abs(now()->diffInSeconds($job['created_at'])) < 30);
 
         $relayPhasePercent = ['queued' => 10, 'downloading' => 40, 'uploading' => 75, 'done' => 100, 'error' => 100];
 
@@ -59,7 +59,16 @@ class Panel extends Component
                 'error' => $relay->error,
                 'color' => $relay->destinationMachine->color,
                 'created_at' => $relay->created_at->toIso8601String(),
-            ]);
+                'finished_at' => $relay->completed_at,
+            ])
+            // Same 30-second grace period as same-machine jobs, instead of
+            // sitting in the panel for the full 10-minute query window
+            // regardless of status — a relay that finished 8 minutes ago
+            // has no more business on screen than one that finished 8
+            // seconds ago just because the same-machine version doesn't.
+            ->filter(fn (array $job) => $job['status'] === 'running'
+                || ! $job['finished_at']
+                || abs(now()->diffInSeconds($job['finished_at'])) < 30);
 
         $jobs = $agentJobs->concat($relayJobs)->sortByDesc('created_at')->values();
 

@@ -3,6 +3,18 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.6.0] - 2026-09-14
+
+### Fixed
+- The transfer queue panel (bottom-right floating widget) had no way to
+  close it — added a dismiss button. Also fixed the real reason a
+  finished cross-machine transfer could sit there for up to 10 minutes
+  regardless of status: Carbon 3 changed `diffInSeconds()`/etc. to
+  return a signed result (negative when the argument is in the past),
+  so an un-`abs()`'d `< 30` age check was always true for anything
+  already in the past. Same-machine transfers had this exact bug too
+  (never actually expired from the panel by age, just relied on status).
+
 ## [0.5.5.0] - 2026-09-14
 
 ### Fixed
