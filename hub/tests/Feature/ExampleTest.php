@@ -12,6 +12,10 @@ class ExampleTest extends TestCase
 
     public function test_root_redirects_a_guest_to_the_login_page(): void
     {
+        // A fresh install (zero users) redirects to the setup wizard
+        // instead — see SetupWizardTest::test_root_redirects_to_setup_on_a_fresh_install.
+        User::factory()->create();
+
         $this->get('/')->assertRedirect(route('login'));
     }
 

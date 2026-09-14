@@ -76,19 +76,18 @@ optional, for when you want it: pin your own `APP_KEY`, change the
 container-internal port for a platform that needs it, etc. — see the
 comments in `docker-compose.yml`.
 
-Create your first account:
+Open the URL you set in `APP_URL` — a fresh install (zero users) shows a
+setup wizard automatically, right there in the browser. Create your
+account and you're straight in as an admin; it walks you into
+**Settings** next to configure SMTP so invites, login codes, and
+password resets actually get delivered (you can skip that and come back
+to it later).
 
-```
-docker compose exec -u www-data hub php artisan lanhub:create-admin
-```
-
-(This only works once — on a fresh install with zero users. To add more
-people afterward, log in and use the Users page instead; self-registration
-is deliberately disabled.)
-
-Log in at the URL you set in `APP_URL`, then go to **Settings** and
-configure SMTP so invites, login codes, and password resets actually get
-delivered.
+(The wizard only appears once — on a fresh install with zero users. To
+add more people afterward, use the Users page instead; self-registration
+is deliberately disabled. If you'd rather script this step, `docker
+compose exec -u www-data hub php artisan lanhub:create-admin` does the
+same thing from the command line.)
 
 **Using a different port?** If you just want the hub reachable on a
 different *host* port, change the left-hand side of `docker-compose.yml`'s

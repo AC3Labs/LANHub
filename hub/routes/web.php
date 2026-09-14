@@ -3,13 +3,21 @@
 use App\Http\Controllers\PreviewController;
 use App\Livewire\Agents\Log;
 use App\Livewire\Dashboard\Index;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // No marketing/welcome page — this is a private, invite-only tool.
-// Straight to the dashboard if logged in, straight to the branded login
-// page otherwise.
-Route::get('/', fn () => redirect()->route(Auth::check() ? 'dashboard' : 'login'));
+// Straight to the dashboard if logged in; otherwise the setup wizard on
+// a fresh install (zero users — see App\Livewire\Setup\Index) or the
+// branded login page once an account already exists.
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->route(User::query()->exists() ? 'login' : 'setup');
+});
 
 Route::get('dashboard', Index::class)
     ->middleware(['auth'])

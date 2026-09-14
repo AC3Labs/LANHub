@@ -15,6 +15,10 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_can_be_rendered(): void
     {
+        // A fresh install (zero users) redirects /login to the setup
+        // wizard instead — see SetupWizardTest.
+        User::factory()->create();
+
         $response = $this->get('/login');
 
         $response

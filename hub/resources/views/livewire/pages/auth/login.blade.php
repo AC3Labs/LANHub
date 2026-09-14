@@ -1,12 +1,25 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Models\User;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
+
+    /**
+     * A fresh install has zero users, so there's nothing to log into yet
+     * — send anyone who lands here directly (bookmark, typed URL) to the
+     * setup wizard instead.
+     */
+    public function mount(): void
+    {
+        if (! User::query()->exists()) {
+            $this->redirect(route('setup'), navigate: true);
+        }
+    }
 
     /**
      * Check credentials and, on success, send the emailed 2FA code and

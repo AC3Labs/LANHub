@@ -1,9 +1,13 @@
 <?php
 
+use App\Livewire\Setup\Index;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware('guest')->group(function () {
+    Route::get('setup', Index::class)
+        ->name('setup');
+
     Volt::route('login', 'pages.auth.login')
         ->name('login');
 
