@@ -56,6 +56,19 @@ func handleDrives(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"drives": listDrives()})
 }
 
+// --- /api/netstats ---
+
+// Cumulative bytes sent/received since the network interface came up —
+// not a rate. The hub samples this endpoint repeatedly and turns two
+// samples into a live speed itself (see computeCurrentSpeeds in
+// App\Livewire\Dashboard\Index), the same way `nload`/Task Manager's
+// network graph works, rather than the agent trying to track its own
+// polling interval.
+func handleNetstats(w http.ResponseWriter, r *http.Request) {
+	sent, recv := netStats()
+	writeJSON(w, 200, map[string]uint64{"bytes_sent": sent, "bytes_recv": recv})
+}
+
 // --- /api/list ---
 
 func handleList(w http.ResponseWriter, r *http.Request) {

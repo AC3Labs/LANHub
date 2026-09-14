@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const agentVersion = "1.0.0"
+const agentVersion = "1.1.0"
 
 var logFilePath string
 
@@ -72,6 +72,7 @@ func setup() (*Config, *http.Server, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", handleHealth)
 	mux.HandleFunc("GET /api/drives", handleDrives)
+	mux.HandleFunc("GET /api/netstats", handleNetstats)
 	mux.HandleFunc("GET /api/list", handleList)
 	mux.HandleFunc("GET /api/download", handleDownload(cfg))
 	mux.HandleFunc("GET /api/preview", handlePreview(cfg))

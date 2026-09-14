@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Machines\Index;
+use App\Livewire\Dashboard\Index;
 use App\Models\Machine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;

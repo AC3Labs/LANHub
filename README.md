@@ -52,32 +52,31 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 
 ### 1. Run the hub
 
-Only `docker-compose.yml` and a `.env` file are needed — it pulls a
-prebuilt image (published automatically from this repo), so this works
-on any docker-compose-driven platform (Dokploy, Portainer, Coolify,
-plain `docker compose up`) without cloning the repo at all. If you do
-have the repo checked out already:
+Just `docker-compose.yml` is needed — no `.env` file, no key-generation
+step. It pulls a prebuilt image (published automatically from this
+repo), so this works on any docker-compose-driven platform (Dokploy,
+Portainer, Coolify, plain `docker compose up`) without cloning the repo
+at all:
 
 ```
-cp .env.example .env
+curl -O https://raw.githubusercontent.com/ac3labs/lanhub/main/docker-compose.yml
 ```
 
-Edit `.env` — at minimum set `APP_URL` to how you'll reach the hub (e.g.
-`http://192.168.1.10:8000`). Then generate an encryption key (this only
-prints one, it doesn't need to write anything, which matters on hosts
-where the container can't write back to a bind-mounted `.env`):
-
-```
-docker compose run --rm hub php artisan key:generate --show
-```
-
-Paste the output into `.env` as `APP_KEY=base64:...`, then:
+Open it and change `APP_URL` to how you'll reach the hub (e.g.
+`http://192.168.1.10:8000`), then:
 
 ```
 docker compose up -d
 ```
 
-First start runs migrations automatically. Create your first account:
+That's it — first start runs migrations and generates its own encryption
+key automatically (saved in the `hub_db` volume, so it survives restarts
+and updates without you doing anything). Everything else in the file is
+optional, for when you want it: pin your own `APP_KEY`, change the
+container-internal port for a platform that needs it, etc. — see the
+comments in `docker-compose.yml`.
+
+Create your first account:
 
 ```
 docker compose exec -u www-data hub php artisan lanhub:create-admin

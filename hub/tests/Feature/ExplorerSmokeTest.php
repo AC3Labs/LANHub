@@ -12,14 +12,23 @@ class ExplorerSmokeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_machines_page_renders_for_an_authenticated_user(): void
+    public function test_machines_page_redirects_to_the_merged_dashboard(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get('/machines')
+            ->assertRedirect('/dashboard');
+    }
+
+    public function test_dashboard_page_renders_for_an_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/dashboard')
             ->assertOk()
-            ->assertSee('Machines');
+            ->assertSee('Dashboard');
     }
 
     public function test_explorer_page_renders_with_a_registered_machine(): void

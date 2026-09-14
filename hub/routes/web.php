@@ -23,9 +23,10 @@ Route::get('explorer', App\Livewire\Explorer\Index::class)
     ->middleware(['auth'])
     ->name('explorer');
 
-Route::get('machines', App\Livewire\Machines\Index::class)
-    ->middleware(['auth'])
-    ->name('machines');
+// Machines was merged into Dashboard — kept as a redirect in case anything
+// still links to the old URL.
+Route::get('machines', fn () => redirect()->route('dashboard'))
+    ->middleware(['auth']);
 
 Route::get('activity', App\Livewire\Activity\Index::class)
     ->middleware(['auth'])

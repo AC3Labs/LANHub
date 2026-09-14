@@ -3,32 +3,38 @@ services:
     # Prebuilt and published by .github/workflows/publish-image.yml on
     # every push to main — this file works standalone, on any
     # docker-compose-driven platform (Dokploy, Portainer, Coolify, plain
-    # `docker compose up`), with no repo checkout needed. If you're
-    # working from a full clone and want to build your own image instead
-    # (e.g. testing a local change), swap this line for `build: ./hub`.
+    # `docker compose up`), with no repo checkout and no separate .env
+    # file needed. If you're working from a full clone and want to build
+    # your own image instead (e.g. testing a local change), swap this
+    # line for `build: ./hub`.
     image: ghcr.io/ac3labs/lanhub:latest
     restart: unless-stopped
-    # PORT controls what nginx actually listens on *inside* the
-    # container (defaults to 8000) — set it if your platform routes to a
-    # specific container-internal port rather than just remapping the
-    # host side below (Dokploy and similar work this way). If you only
-    # want a different port on the *host* machine and don't care what's
-    # happening inside the container, you don't need this at all — just
-    # change the left-hand side of the ports mapping, e.g. "8949:8000".
-    environment:
-      PORT: "8000"
-    # host:container — if you change PORT above, the container side
-    # (the number after the colon) must match it.
     ports:
       - "8000:8000"
+    environment:
+      # How you'll reach the hub in a browser — change this to your
+      # server's real address (e.g. http://192.168.1.10:8000).
+      APP_URL: http://localhost:8000
+
+      # Optional. If you leave this out, the hub generates one itself on
+      # first start and saves it in the hub_db volume below, so it stays
+      # stable across restarts and updates without you doing anything.
+      # Set it yourself only if you want to pin a specific key (e.g. to
+      # move an existing database to a new container from scratch):
+      # APP_KEY: "base64:..."
+
+      # Uncommon: only needed if your platform (Dokploy and similar)
+      # routes to a specific container-internal port rather than just
+      # remapping the host side of `ports:` below. If you just want a
+      # different port on the host, change the left-hand side of
+      # `ports:` instead (e.g. "8949:8000") — leave this alone.
+      # PORT: "8000"
     volumes:
-      # Your own .env (copy .env.example -> .env first and fill it in) —
-      # bind-mounted as a single file so it survives image updates.
-      - ./.env:/var/www/html/.env
+      # The only thing that needs to persist — your database (and the
+      # auto-generated APP_KEY above, if you didn't set your own).
       # Deliberately NOT the whole database/ directory — that would hide
       # the image's own database/migrations/ folder on every update and
-      # new migrations would silently never run. Only the sqlite file
-      # itself needs to persist.
+      # new migrations would silently never run.
       - hub_db:/var/www/html/storage/db
 
 volumes:

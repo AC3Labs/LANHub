@@ -35,6 +35,15 @@ Returns the root volumes to seed the file tree.
 ]}
 ```
 
+### `GET /api/netstats`
+Cumulative bytes sent/received since the network interface(s) came up
+(everything but loopback) — not a rate. The hub samples this repeatedly
+and derives a live speed from the delta between two samples itself,
+the same way `nload`/Task Manager's network graph works.
+```json
+{ "bytes_sent": 128374651, "bytes_recv": 998172345 }
+```
+
 ### `GET /api/list?path=...`
 Lists one directory (non-recursive).
 ```json

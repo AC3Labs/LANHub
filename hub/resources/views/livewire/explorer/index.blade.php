@@ -183,7 +183,7 @@
             <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
                 <p class="text-stone-500">
                     @if ($machines->isEmpty())
-                        No machines registered yet. <a href="{{ route('machines') }}" wire:navigate class="text-tan-600 underline">Add one</a> to start browsing.
+                        No machines registered yet. <a href="{{ route('dashboard') }}" wire:navigate class="text-tan-600 underline">Add one</a> to start browsing.
                     @else
                         Open a machine to start browsing its files.
                     @endif

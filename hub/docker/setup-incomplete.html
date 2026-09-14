@@ -13,19 +13,11 @@
 </style>
 </head>
 <body>
-  <h1>LANHub is running, but isn't set up yet</h1>
-  <p>This container couldn't find a valid <code>APP_KEY</code> in <code>.env</code>, and wasn't able to
-  generate one automatically — this happens on some hosts where the bind-mounted <code>.env</code>
-  file isn't writable from inside the container.</p>
-  <p>Fix it in two steps:</p>
-  <ol>
-    <li>Generate a key without starting the app:
-      <pre>docker compose run --rm hub php artisan key:generate --show</pre>
-    </li>
-    <li>Paste the result into your <code>.env</code> file as <code>APP_KEY=base64:...</code>, then restart:
-      <pre>docker compose up -d</pre>
-    </li>
-  </ol>
-  <p>Once <code>APP_KEY</code> is set, reload this page.</p>
+  <h1>LANHub hit a problem starting up</h1>
+  <p>The container is up, but something failed during startup (most likely a database
+  migration error). Check the container's logs for the real error:</p>
+  <pre>docker compose logs hub</pre>
+  <p>Once it's fixed, restart the container:</p>
+  <pre>docker compose up -d</pre>
 </body>
 </html>

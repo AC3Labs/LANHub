@@ -26,36 +26,47 @@ serve_setup_incomplete() {
     exec nginx -g "daemon off;"
 }
 
-if [ ! -f .env ]; then
-    serve_setup_incomplete "No .env found at /var/www/html/.env — copy .env.example to .env (and mount it), then restart this container."
-fi
-
-# If APP_KEY is missing, try to write one via Laravel's own key:generate
-# (which rewrites .env in place through PHP's normal file I/O, not a
-# shell sed -i that could swap out the file's inode) — this is what most
-# hosts need, and fixes a real first-deploy problem where a user never
-# ran the manual key-generation step. On at least one real host, though,
-# even a --privileged root container was denied write access to a
-# bind-mounted .env (host-level restriction, never fully explained, and
-# not unique to that one host — reproduced it again on a second machine)
-# — if that happens here too, serve setup instructions instead of
-# crash-looping.
-if ! grep -q '^APP_KEY=base64:' .env; then
-    if php artisan key:generate --force >/dev/null 2>&1 && grep -q '^APP_KEY=base64:' .env; then
-        echo "No APP_KEY was set — generated one and wrote it to .env."
-    else
-        serve_setup_incomplete "APP_KEY is missing from .env, and this container could not write one automatically (bind-mounted .env isn't writable from inside the container on this host). Run: docker compose run --rm hub php artisan key:generate --show — then paste the result into .env as APP_KEY=, and restart this container."
-    fi
-fi
-
-# DB_DATABASE (see .env.example) points here, deliberately outside
+# DB_DATABASE (see docker/.env.docker) points here, deliberately outside
 # database/ — see docker-compose.yml for why this exact path should be
-# the one persistent volume mount.
+# the one persistent volume mount. Created before the APP_KEY step below
+# since that also persists a file into this same directory.
 mkdir -p storage/db
 touch storage/db/database.sqlite
+
+# The image ships a real .env (see Dockerfile) with everything except
+# APP_KEY — no file needs to exist or be writable for a default install;
+# anything the host sets via docker-compose `environment:`/`env_file:`
+# already wins over it automatically (real process env vars always take
+# precedence over .env, and clear_env=no in docker/www.conf passes them
+# through to PHP). APP_KEY is the one value that can't just default to
+# empty: it encrypts stored data (agent tokens), so once one is in use it
+# has to stay stable across restarts and recreations, not be regenerated
+# every boot.
+#
+# Two ways a real key can already be in place, neither visible as a
+# shell env var here: a real process env var (checked via $APP_KEY,
+# which *is* visible to this script) or a value already baked into or
+# bind-mounted over .env (e.g. someone using the old-style full-.env
+# setup) — that one has to be checked by reading the file itself, since
+# nothing sources .env into this shell. Only fall back to the
+# volume-persisted/auto-generated key when neither is present.
+if [ -z "$APP_KEY" ] && ! grep -q '^APP_KEY=base64:' .env; then
+    key_file="storage/db/.app_key"
+    if [ -f "$key_file" ]; then
+        APP_KEY="$(cat "$key_file")"
+    else
+        APP_KEY="base64:$(openssl rand -base64 32)"
+        printf '%s' "$APP_KEY" > "$key_file"
+        echo "No APP_KEY was set — generated one and saved it to the persistent volume (storage/db/.app_key)."
+    fi
+    export APP_KEY
+fi
+
 chown -R www-data:www-data storage bootstrap/cache
 
-php artisan migrate --force
+if ! php artisan migrate --force; then
+    serve_setup_incomplete "php artisan migrate failed — check the logs above for the real error."
+fi
 
 # Drives Schedule::command('machines:check-health') in routes/console.php
 # (and anything scheduled later) — nothing else runs cron/supervisord in

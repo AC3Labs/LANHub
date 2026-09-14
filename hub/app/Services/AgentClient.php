@@ -34,6 +34,24 @@ class AgentClient
         return $this->get('/api/drives')['drives'] ?? [];
     }
 
+    /**
+     * Cumulative bytes sent/received since the agent's network
+     * interface(s) came up — not a rate. See computeCurrentSpeeds in
+     * App\Livewire\Dashboard\Index for how two samples become a live
+     * speed.
+     *
+     * @return array{bytes_sent: int, bytes_recv: int}
+     */
+    public function netstats(): array
+    {
+        $stats = $this->get('/api/netstats');
+
+        return [
+            'bytes_sent' => (int) ($stats['bytes_sent'] ?? 0),
+            'bytes_recv' => (int) ($stats['bytes_recv'] ?? 0),
+        ];
+    }
+
     public function listDirectory(string $path): array
     {
         return $this->get('/api/list', ['path' => $path]);

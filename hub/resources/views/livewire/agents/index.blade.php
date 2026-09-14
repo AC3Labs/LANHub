@@ -17,7 +17,7 @@
         @if ($machines->isEmpty())
             <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
                 <p class="text-stone-500">
-                    No machines registered yet. <a href="{{ route('machines') }}" wire:navigate class="text-tan-600 underline">Add one</a> to get started.
+                    No machines registered yet. <a href="{{ route('dashboard') }}" wire:navigate class="text-tan-600 underline">Add one</a> to get started.
                 </p>
             </div>
         @else
