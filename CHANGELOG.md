@@ -3,6 +3,15 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.5.7.0] - 2026-09-14
+
+### Fixed
+- Cross-machine search ("Search for a file on any machine connected to
+  LANHub") had no visual indicator while it was running, which can take
+  a few seconds since it queries every drive on every accessible
+  machine — looked like it wasn't working at all. Now shows a spinning
+  icon and "Searching…" text, and disables the input until it finishes.
+
 ## [0.5.6.0] - 2026-09-14
 
 ### Fixed
