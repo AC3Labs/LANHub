@@ -3,6 +3,19 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.6.1.0] - 2026-09-14
+
+### Fixed
+- The previous fix for the APP_KEY restart-loop only made the crash
+  message clearer — it didn't stop the loop itself. Reproduced this for
+  real: a fresh `docker compose up` with the last fix still restart-
+  looped forever whenever the bind-mounted `.env` genuinely can't be
+  written to (confirmed reproducible, not a one-host fluke). The
+  container now stays up and serves a plain setup-instructions page on
+  its own port instead of exiting — `docker ps` shows the real state
+  (Up, not Restarting), and the actual problem is visible just by
+  loading the page. Same treatment for a missing `.env` file entirely.
+
 ## [0.6.0.0] - 2026-09-14
 
 ### Fixed

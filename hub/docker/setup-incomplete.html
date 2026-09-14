@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LANHub — setup needed</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; background: #f5f4f2; color: #2c2925; max-width: 640px; margin: 64px auto; padding: 0 24px; line-height: 1.6; }
+  h1 { font-size: 22px; }
+  code, pre { background: #ece9e4; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+  pre { padding: 12px 16px; overflow-x: auto; }
+  ol { padding-left: 20px; }
+  li { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <h1>LANHub is running, but isn't set up yet</h1>
+  <p>This container couldn't find a valid <code>APP_KEY</code> in <code>.env</code>, and wasn't able to
+  generate one automatically — this happens on some hosts where the bind-mounted <code>.env</code>
+  file isn't writable from inside the container.</p>
+  <p>Fix it in two steps:</p>
+  <ol>
+    <li>Generate a key without starting the app:
+      <pre>docker compose run --rm hub php artisan key:generate --show</pre>
+    </li>
+    <li>Paste the result into your <code>.env</code> file as <code>APP_KEY=base64:...</code>, then restart:
+      <pre>docker compose up -d</pre>
+    </li>
+  </ol>
+  <p>Once <code>APP_KEY</code> is set, reload this page.</p>
+</body>
+</html>

@@ -21,6 +21,8 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY docker/setup-incomplete.conf.template /etc/nginx/setup-incomplete.conf.template
+COPY docker/setup-incomplete.html /etc/lanhub/setup-incomplete.html
 COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

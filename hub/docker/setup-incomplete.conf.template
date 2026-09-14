@@ -1,0 +1,11 @@
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /etc/lanhub;
+
+    location / {
+        default_type text/html;
+        try_files /setup-incomplete.html =404;
+    }
+}
