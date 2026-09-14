@@ -17,7 +17,7 @@ All notable changes to LANHub are recorded here. Versioned as
 
 ### Changed
 - Cross-machine search now shows real per-machine progress ("Searching
-  ASUS Studio…") instead of one opaque spinner for the whole run.
+  Desktop-02…") instead of one opaque spinner for the whole run.
   `searchEverywhere()` was split into `startGlobalSearch()` (builds the
   queue) and `searchNextMachine()` (searches one machine), driven by a
   browser-side loop that awaits one real Livewire round-trip per

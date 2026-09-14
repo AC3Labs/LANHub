@@ -374,7 +374,7 @@ class Index extends Component
      * calls searchNextMachine() in a loop (one real Livewire round-trip
      * per machine) until $globalQueue is empty. Split this way, instead of
      * one method looping over every machine server-side, so "Searching
-     * ASUS Studio…" reflects an actual in-flight request to that machine
+     * Desktop-02…" reflects an actual in-flight request to that machine
      * rather than a client-side timer with no relation to real progress.
      */
     public function startGlobalSearch(): void
