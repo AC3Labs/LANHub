@@ -3,6 +3,30 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.7.0.0] - 2026-09-14
+
+### Added
+- Dashboard and Machines are now one page: an accordion list per machine.
+  Collapsed, each row shows name, computer name, OS (with a real
+  Windows/Linux logo), LAN IP, and status; expanded, it shows full
+  detail, storage, and three live speed gauges (upstream, downstream,
+  average).
+- The gauges are genuinely live now, not derived from file-transfer
+  history — a new agent endpoint (`GET /api/netstats`, agent v1.1.0)
+  reports each machine's real network-interface byte counters, and the
+  hub samples it every few seconds to compute an actual current speed.
+
+### Changed
+- The Docker install no longer needs a `.env` file or a manual
+  `key:generate` step — `docker compose up -d` is enough on its own.
+  `APP_KEY` is generated automatically on first boot and persisted in
+  the same volume as the database, so it survives restarts and image
+  updates without any action from the user. Setting `APP_KEY` (or any
+  other Laravel env var) directly in `docker-compose.yml`'s
+  `environment:` block now just works, as expected.
+- `/machines` now redirects to `/dashboard` (the pages were merged); the
+  separate "Machines" nav link was removed.
+
 ## [0.6.1.0] - 2026-09-14
 
 ### Fixed
