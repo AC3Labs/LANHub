@@ -3,6 +3,23 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.8.0.0] - 2026-09-14
+
+### Added
+- A fresh install (zero users) now shows an in-browser setup wizard at
+  `/` and `/login` to create the first admin account, instead of
+  requiring `php artisan lanhub:create-admin` from the command line.
+  Creating the account logs you straight in (no emailed 2FA code, since
+  SMTP isn't configured yet) and lands on Settings to configure outgoing
+  mail next. The wizard only ever appears once — on a genuinely fresh
+  install with zero users; afterward, adding people goes through the
+  Users page instead, since self-registration is deliberately disabled.
+
+### Changed
+- The CLI admin-creation command still works as a scriptable
+  alternative to the wizard, for anyone who wants to automate first-run
+  setup instead of using the browser.
+
 ## [0.7.0.0] - 2026-09-14
 
 ### Added
