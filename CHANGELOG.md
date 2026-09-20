@@ -3,6 +3,18 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.8.2.0] - 2026-09-20
+
+### Fixed
+- The dark mode toggle in the top nav could show the wrong position
+  (knob on the light side) right after navigating to a page via
+  wire:navigate, even though the page itself was correctly dark-themed.
+  wire:navigate replaces the toggle's DOM node with a fresh server
+  render — which never carries the client-only "dark" class — a moment
+  before the theme gets reapplied, so the toggle's one-time initial read
+  could catch it in that in-between state. It now re-reads its state on
+  every navigation instead of only once.
+
 ## [0.8.1.0] - 2026-09-20
 
 ### Fixed

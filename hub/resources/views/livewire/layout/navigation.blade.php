@@ -58,8 +58,23 @@ new class extends Component
 
             <!-- Dark mode toggle — deliberately outside the sm:-gated
                  containers below so it's reachable at every viewport
-                 width, not just desktop. -->
-            <div class="flex items-center gap-2" x-data="{ dark: document.documentElement.classList.contains('dark') }">
+                 width, not just desktop.
+
+                 Also re-reads `dark` on every livewire:navigated event: a
+                 wire:navigate page swap replaces this component's DOM node
+                 with a fresh server render and re-inits `dark` from
+                 document.documentElement's class at that moment — but the
+                 incoming server HTML never has the "dark" class (theme is
+                 client-only, see layouts/app.blade.php), so without this
+                 the switch would read as off even while the page itself
+                 is correctly re-themed dark a moment later by that same
+                 event's other listener (registered first, in <head>, so
+                 it always finishes fixing the class before this one runs). -->
+            <div
+                class="flex items-center gap-2"
+                x-data="{ dark: document.documentElement.classList.contains('dark') }"
+                x-on:livewire:navigated.window="dark = document.documentElement.classList.contains('dark')"
+            >
                 <span class="text-xs font-medium transition-colors" :class="dark ? 'text-stone-400' : 'text-stone-700'">Light Mode</span>
                 <button
                     type="button"
