@@ -3,6 +3,23 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.8.1.0] - 2026-09-20
+
+### Fixed
+- The published Docker image now enables OPcache and caches config,
+  routes, and compiled views at container start, instead of PHP
+  re-parsing every source file from disk on every single request. This
+  had been invisible on fast hardware but made the hub noticeably
+  sluggish on slower machines.
+- Agent HTTP calls now fail fast (3s connect timeout) instead of hanging
+  for up to 15s each. Dashboard's machine-status and network-speed
+  polling calls several endpoints per machine, sequentially, on every
+  page load and every `wire:poll` tick — a single asleep, firewalled, or
+  otherwise unreachable machine could turn that into tens of seconds of
+  hang per poll, and a few unreachable machines together could tie up
+  every php-fpm worker and make the whole hub feel unusable, even though
+  nothing was actually broken.
+
 ## [0.8.0.0] - 2026-09-14
 
 ### Added

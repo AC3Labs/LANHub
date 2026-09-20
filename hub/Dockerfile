@@ -34,6 +34,7 @@ COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY docker/setup-incomplete.conf.template /etc/nginx/setup-incomplete.conf.template
 COPY docker/setup-incomplete.html /etc/lanhub/setup-incomplete.html
 COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh

@@ -1,23 +1,16 @@
 <?php
 
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PreviewController;
 use App\Livewire\Agents\Log;
 use App\Livewire\Dashboard\Index;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // No marketing/welcome page — this is a private, invite-only tool.
 // Straight to the dashboard if logged in; otherwise the setup wizard on
 // a fresh install (zero users — see App\Livewire\Setup\Index) or the
 // branded login page once an account already exists.
-Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-
-    return redirect()->route(User::query()->exists() ? 'login' : 'setup');
-});
+Route::get('/', HomeController::class);
 
 Route::get('dashboard', Index::class)
     ->middleware(['auth'])
@@ -32,8 +25,9 @@ Route::get('explorer', App\Livewire\Explorer\Index::class)
     ->name('explorer');
 
 // Machines was merged into Dashboard — kept as a redirect in case anything
-// still links to the old URL.
-Route::get('machines', fn () => redirect()->route('dashboard'))
+// still links to the old URL. Route::redirect() (not a closure) so this
+// survives `route:cache`.
+Route::redirect('machines', '/dashboard')
     ->middleware(['auth']);
 
 Route::get('activity', App\Livewire\Activity\Index::class)

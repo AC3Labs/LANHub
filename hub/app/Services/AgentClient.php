@@ -207,8 +207,18 @@ class AgentClient
 
     private function request(): PendingRequest
     {
+        // A machine that's asleep, firewalled, or otherwise unreachable
+        // used to hang for the full 15s `timeout()` below on every call —
+        // and Dashboard\Index::refresh()/pollNetwork() make several of
+        // these calls per machine, sequentially, on every page load and
+        // every wire:poll tick. A handful of offline machines could turn
+        // that into a multi-minute hang and tie up php-fpm workers for
+        // everyone. A real agent on the LAN completes the TCP handshake
+        // near-instantly, so 3s is generous while capping the worst case
+        // for an unreachable host at 3s instead of 15s per call.
         $request = Http::baseUrl($this->machine->base_url)
             ->withToken($this->machine->agent_token)
+            ->connectTimeout(3)
             ->timeout(15);
 
         // Agents serve HTTPS with a self-signed cert (see docs/AGENT_API.md

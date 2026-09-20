@@ -64,6 +64,18 @@ fi
 
 chown -R www-data:www-data storage bootstrap/cache
 
+# Can't happen at build time (Dockerfile) because APP_KEY isn't known
+# until just above — config:cache freezes resolved env() values, so
+# caching before APP_KEY exists would bake in an empty key. Skips the
+# per-request cost of re-reading/re-parsing every config file, route
+# file, and Blade view from disk, which is the other big contributor
+# (alongside OPcache, see docker/opcache.ini) to this app feeling slow
+# on weaker hardware even though the work is identical every request.
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+
 if ! php artisan migrate --force; then
     serve_setup_incomplete "php artisan migrate failed — check the logs above for the real error."
 fi
