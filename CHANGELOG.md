@@ -3,6 +3,26 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.9.2.1] - 2026-10-11
+
+### Fixed
+- Large files can now be copied and moved between machines. The hub read
+  each relayed file entirely into memory, and anything bigger than roughly
+  50-60 MB exceeded PHP's 128 MB limit and crashed the background worker
+  mid-transfer (a 98 MB zip did exactly that). Files now download straight
+  to a temporary file on the hub's disk, then upload from there, so memory
+  use stays flat whatever the size. Sync rules use the same relay and get
+  the same fix.
+- Cross-machine transfers no longer give up after 15 seconds. That limit
+  is meant for quick API calls and applied to the whole file transfer too,
+  which would cut off a large file on a slow link. File transfers now have
+  no overall time limit and only give up if they stall (under 1 KB/s for a
+  minute).
+- A transfer whose background worker crashed or was restarted stayed
+  "downloading" forever and showed "1 transfer in progress" on the Agents
+  page. It is now marked as failed with a message saying nothing was
+  deleted.
+
 ## [0.9.2.0] - 2026-10-11
 
 ### Fixed
