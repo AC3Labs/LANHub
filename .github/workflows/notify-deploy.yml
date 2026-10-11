@@ -69,7 +69,7 @@ jobs:
             BODY="${BODY}"$'\n''- Hub: rsync -> docker build -> recreate container on nas'
           fi
           if [ "${{ steps.changed.outputs.agent }}" = "true" ]; then
-            BODY="${BODY}"$'\n''- Agent: push updated agent.py to every registered machine and restart its service'
+            BODY="${BODY}"$'\n''- Agent: copy the new binary from agent/dist/ to every registered machine and restart its service'
           fi
 
           curl -s \

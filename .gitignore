@@ -1,0 +1,5 @@
+# Local-only files that must never reach this public repo
+# A machine's real agent token
+agent/config.json
+# Private deployment notes for this install
+LANHub.md
