@@ -5,7 +5,7 @@
                 <h2 class="font-semibold text-xl text-stone-800">Sync Rules</h2>
                 <p class="text-sm text-stone-500 mt-1">Automatically keep a folder on one machine in sync with a folder on another.</p>
             </div>
-            <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg shadow-soft transition">
+            <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
                 + New rule
             </button>
         </div>
@@ -48,13 +48,13 @@
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <button wire:click="toggle({{ $rule->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                            <button wire:click="toggle({{ $rule->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                 {{ $rule->enabled ? 'Pause' : 'Resume' }}
                             </button>
-                            <button wire:click="openEdit({{ $rule->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                            <button wire:click="openEdit({{ $rule->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                 Edit
                             </button>
-                            <button wire:click="delete({{ $rule->id }})" wire:confirm="Delete this sync rule?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-red-600 hover:bg-red-50 transition">
+                            <button wire:click="delete({{ $rule->id }})" wire:confirm="Delete this sync rule?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-red-50 transition">
                                 Delete
                             </button>
                         </div>

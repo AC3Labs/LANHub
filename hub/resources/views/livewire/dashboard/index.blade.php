@@ -10,12 +10,12 @@
                 <p class="text-sm text-stone-500 mt-1">Live status, storage, and throughput across every registered machine.</p>
             </div>
             <div class="flex items-center gap-2">
-                <button wire:click="refresh" wire:loading.attr="disabled" wire:target="refresh" class="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-stone-50 border border-stone-200 text-stone-600 text-sm font-medium rounded-lg shadow-soft transition disabled:opacity-60">
+                <button wire:click="refresh" wire:loading.attr="disabled" wire:target="refresh" class="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 border border-stone-200 text-black text-sm font-medium rounded-lg shadow-soft transition disabled:opacity-60">
                     <svg wire:loading.class="animate-spin" wire:target="refresh" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <span wire:loading.remove wire:target="refresh">Refresh</span>
                     <span wire:loading wire:target="refresh">Refreshing…</span>
                 </button>
-                <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg shadow-soft transition">
+                <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     Add Machine
                 </button>
@@ -27,7 +27,7 @@
         @if ($machines->isEmpty())
             <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
                 <p class="text-stone-500">No machines registered yet.</p>
-                <button wire:click="openCreate" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg transition">
+                <button wire:click="openCreate" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg transition">
                     Add your first machine
                 </button>
             </div>
@@ -202,17 +202,17 @@
                             @endif
 
                             <div class="px-5 py-4 flex items-center gap-2">
-                                <button wire:click="refreshOne({{ $machine->id }})" wire:loading.attr="disabled" wire:target="refreshOne({{ $machine->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                                <button wire:click="refreshOne({{ $machine->id }})" wire:loading.attr="disabled" wire:target="refreshOne({{ $machine->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                     <span wire:loading.remove wire:target="refreshOne({{ $machine->id }})">Ping</span>
                                     <span wire:loading wire:target="refreshOne({{ $machine->id }})">Checking…</span>
                                 </button>
-                                <a href="{{ route('explorer') }}?machine={{ $machine->id }}" wire:navigate class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                                <a href="{{ route('explorer') }}?machine={{ $machine->id }}" wire:navigate class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                     Browse
                                 </a>
-                                <button wire:click="openEdit({{ $machine->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                                <button wire:click="openEdit({{ $machine->id }})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                     Edit
                                 </button>
-                                <button wire:click="delete({{ $machine->id }})" wire:confirm="Remove {{ $machine->name }}? This cannot be undone." class="ml-auto text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-red-600 hover:bg-red-50 transition">
+                                <button wire:click="delete({{ $machine->id }})" wire:confirm="Remove {{ $machine->name }}? This cannot be undone." class="ml-auto text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-red-50 transition">
                                     Delete
                                 </button>
                             </div>

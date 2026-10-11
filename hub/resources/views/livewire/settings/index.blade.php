@@ -25,7 +25,7 @@
                         <x-input-error :messages="$errors->get('hubAddress')" class="mt-1" />
                     </div>
                     <div class="flex items-center justify-between">
-                        <button type="button" wire:click="useCurrentAddress" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                        <button type="button" wire:click="useCurrentAddress" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                             Use the address I'm on now
                         </button>
                         <x-primary-button>Save</x-primary-button>
@@ -91,7 +91,7 @@
                 </div>
 
                 <div class="flex items-center justify-between pt-2">
-                    <button type="button" wire:click="sendTestEmail" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                    <button type="button" wire:click="sendTestEmail" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                         Send test email to myself
                     </button>
                     <x-primary-button>Save</x-primary-button>

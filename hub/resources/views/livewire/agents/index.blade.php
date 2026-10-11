@@ -5,7 +5,7 @@
                 <h2 class="font-semibold text-xl text-stone-800">Agents</h2>
                 <p class="text-sm text-stone-500 mt-1">Live health and transfer throughput for every machine's agent.</p>
             </div>
-            <button wire:click="refresh" wire:loading.attr="disabled" wire:target="refresh" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg shadow-soft transition disabled:opacity-60">
+            <button wire:click="refresh" wire:loading.attr="disabled" wire:target="refresh" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition disabled:opacity-60">
                 <svg wire:loading.class="animate-spin" wire:target="refresh" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                 <span wire:loading.remove wire:target="refresh">Refresh</span>
                 <span wire:loading wire:target="refresh">Refreshing…</span>
@@ -79,7 +79,7 @@
                             </p>
                         @endif
 
-                        <a href="{{ route('agents.log', $machine) }}" wire:navigate class="mt-auto text-center text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                        <a href="{{ route('agents.log', $machine) }}" wire:navigate class="mt-auto text-center text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                             View transfer log
                         </a>
                     </div>

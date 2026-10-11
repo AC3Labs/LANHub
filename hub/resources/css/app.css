@@ -61,3 +61,22 @@
     --color-stone-800: 237 231 220;
     --color-stone-900: 250 247 242;
 }
+
+/*
+ * Form fields: always black text on a white box, in both themes. The theme
+ * tokens above invert text colors in dark mode, but fields stay white -
+ * without this, typed text turned near-white on white and disappeared.
+ * The :not([type]) selectors out-rank Tailwind's single-class utilities,
+ * so this wins over any text-stone-* / bg-transparent on a field.
+ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="hidden"]):not([type="file"]),
+select,
+textarea {
+    color: #000;
+    background-color: #fff;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):not([type="hidden"]):not([type="file"]):disabled,
+select:disabled,
+textarea:disabled {
+    color: #6b6b6b;
+}

@@ -5,7 +5,7 @@
                 <h2 class="font-semibold text-xl text-stone-800">Users</h2>
                 <p class="text-sm text-stone-500 mt-1">Everyone with access to LANHub, and what they can see.</p>
             </div>
-            <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg shadow-soft transition">
+            <button wire:click="openCreate" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
                 + Invite user
             </button>
         </div>
@@ -29,15 +29,15 @@
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         @if ($user->isPending())
-                            <button wire:click="resendInvite({{ $user->id }})" wire:confirm="Resend the invite email to {{ $user->email }}?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                            <button wire:click="resendInvite({{ $user->id }})" wire:confirm="Resend the invite email to {{ $user->email }}?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                 Resend invite
                             </button>
                         @endif
                         @if ($user->id !== auth()->id())
-                            <button wire:click="toggleAdmin({{ $user->id }})" wire:confirm="{{ $user->is_admin ? 'Remove admin access from' : 'Grant admin access to' }} {{ $user->name }}?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                            <button wire:click="toggleAdmin({{ $user->id }})" wire:confirm="{{ $user->is_admin ? 'Remove admin access from' : 'Grant admin access to' }} {{ $user->name }}?" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">
                                 {{ $user->is_admin ? 'Remove admin' : 'Make admin' }}
                             </button>
-                            <button wire:click="delete({{ $user->id }})" wire:confirm="Remove {{ $user->name }}? This cannot be undone." class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-red-600 hover:bg-red-50 transition">
+                            <button wire:click="delete({{ $user->id }})" wire:confirm="Remove {{ $user->name }}? This cannot be undone." class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-red-50 transition">
                                 Delete
                             </button>
                         @else
