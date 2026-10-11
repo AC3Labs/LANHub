@@ -3,6 +3,34 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.9.2.0] - 2026-10-11
+
+### Fixed
+- Folders can now be moved and copied, not just files. Dragging a folder to
+  another machine always failed with "... is not a file," because the
+  cross-machine relay downloaded a single file. It now recreates the whole
+  folder on the destination, including subfolders and empty folders, and
+  relays it file by file. A folder move only deletes the original after
+  every file has arrived, so a failure partway through never loses data.
+  A folder isn't merged into an existing one with the same name.
+- Moving a file or folder between drives on the same machine (for example
+  D:\ to C:\, or between two mounted disks on Linux) failed, because the
+  agent's move is an OS rename, which can't cross drives. The hub now falls
+  back to copy-then-delete, as native file managers do. No agent update is
+  needed.
+- Dropping a folder into itself or one of its own subfolders is refused
+  with a clear message instead of being attempted.
+
+### Changed
+- Text inside form fields and buttons is now black. In dark mode, typed text
+  in fields (and in dropdowns, text areas, and the Explorer rename and search
+  boxes) turned near-white on a white box and was almost unreadable. Fields
+  now always show black text on white in both themes. Placeholder hints
+  stay grey. Filled buttons (gold primary, red danger) use black text, and
+  outlined buttons are white with black text. Icon-only buttons, menu items,
+  and text-style links like "Cancel" are unchanged, since they sit directly
+  on the dark background.
+
 ## [0.9.1.0] - 2026-10-11
 
 ### Fixed
