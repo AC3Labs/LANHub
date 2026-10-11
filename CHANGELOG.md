@@ -3,6 +3,14 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.9.1.0] - 2026-10-11
+
+### Fixed
+- Profile page cards used Breeze's default `bg-white`/`dark:bg-gray-800`,
+  which rendered navy blue in dark mode instead of LANHub's stone/tan
+  palette. They now use the same card style as every other page
+  (`bg-paper`, soft shadow, stone border).
+
 ## [0.9.0.0] - 2026-10-11
 
 Pull it, start it, and it works — no Docker knowledge, no edits to the
