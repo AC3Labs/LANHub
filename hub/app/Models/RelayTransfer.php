@@ -12,6 +12,7 @@ class RelayTransfer extends Model
         'destination_machine_id',
         'source_path',
         'destination_path',
+        'is_directory',
         'bytes_transferred',
         'kind',
         'status',
@@ -24,6 +25,7 @@ class RelayTransfer extends Model
     protected function casts(): array
     {
         return [
+            'is_directory' => 'boolean',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

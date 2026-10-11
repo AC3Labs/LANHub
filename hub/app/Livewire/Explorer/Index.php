@@ -243,10 +243,10 @@ class Index extends Component
 
     /**
      * Drop a row (drag source) onto a directory (drop target). Default drag copies;
-     * holding Ctrl moves (deletes the source after a successful transfer). Cross-machine
-     * transfers relay the file through the hub either way.
+     * holding Ctrl moves (deletes the source after a successful transfer). Works for
+     * files and whole folders. Cross-machine transfers relay through the hub either way.
      */
-    public function handleInternalDrop(string $sourcePaneId, string $sourcePath, string $sourceName, string $targetPaneId, ?string $targetPath, bool $copy): void
+    public function handleInternalDrop(string $sourcePaneId, string $sourcePath, string $sourceName, string $targetPaneId, ?string $targetPath, bool $copy, bool $isDirectory = false): void
     {
         $sourceIndex = $this->paneIndex($sourcePaneId);
         $targetIndex = $this->paneIndex($targetPaneId);
@@ -265,13 +265,21 @@ class Index extends Component
             return;
         }
 
+        // A folder can't be dropped into itself or anything inside it.
+        if ($isDirectory && $sourceMachine->id === $targetMachine->id
+            && str_starts_with(rtrim($destination, $targetSeparator).$targetSeparator, rtrim($sourcePath, $targetSeparator).$targetSeparator)) {
+            $this->panes[$targetIndex]['error'] = "Can't put a folder inside itself.";
+
+            return;
+        }
+
         try {
             if ($sourceMachine->id === $targetMachine->id) {
                 $copy
                     ? $sourceMachine->agent()->copy($sourcePath, $destination)
-                    : $sourceMachine->agent()->move($sourcePath, $destination);
+                    : $this->moveOnSameMachine($sourceMachine, $sourcePath, $destination);
             } else {
-                $this->relayTransfer($sourceMachine, $sourcePath, $targetMachine, $destination, $copy);
+                $this->relayTransfer($sourceMachine, $sourcePath, $targetMachine, $destination, $copy, $isDirectory);
             }
         } catch (AgentException $e) {
             $this->panes[$targetIndex]['error'] = $e->getMessage();
@@ -282,18 +290,40 @@ class Index extends Component
     }
 
     /**
+     * The agent's move is an OS rename, which can't cross drives or
+     * filesystems (D:\ to C:\ on Windows, two mounted disks on Linux) - for
+     * files and folders alike. In that case, copy then delete the original,
+     * which is what a native file manager does too. The original is only
+     * deleted after the copy succeeded.
+     */
+    private function moveOnSameMachine(Machine $machine, string $source, string $destination): void
+    {
+        try {
+            $machine->agent()->move($source, $destination);
+        } catch (AgentException $e) {
+            if (! preg_match('/cross-device|different disk drive|not same device/i', $e->getMessage())) {
+                throw $e;
+            }
+
+            $machine->agent()->copy($source, $destination);
+            $machine->agent()->delete($source);
+        }
+    }
+
+    /**
      * Cross-machine transfers relay through the hub (agents never talk to
      * each other directly), which can take a while for anything sizeable —
      * this runs on the queue via RelayTransferJob instead of blocking the
      * request, and the Transfers panel polls RelayTransfer for progress.
      */
-    private function relayTransfer(Machine $source, string $sourcePath, Machine $target, string $destination, bool $copy): void
+    private function relayTransfer(Machine $source, string $sourcePath, Machine $target, string $destination, bool $copy, bool $isDirectory = false): void
     {
         $relay = RelayTransfer::create([
             'source_machine_id' => $source->id,
             'destination_machine_id' => $target->id,
             'source_path' => $sourcePath,
             'destination_path' => $destination,
+            'is_directory' => $isDirectory,
             'kind' => $copy ? 'copy' : 'move',
             'status' => 'queued',
             'user_id' => Auth::id(),

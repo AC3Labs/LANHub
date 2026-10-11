@@ -4,7 +4,7 @@
         dropTarget: null,
         startDrag(event, paneId, path, name, type) {
             if (type === 'drive') return;
-            this.dragging = { paneId, path, name };
+            this.dragging = { paneId, path, name, type };
             event.dataTransfer.effectAllowed = 'copyMove';
             event.dataTransfer.setData('text/plain', JSON.stringify(this.dragging));
             this.setDragImage(event, name);
@@ -49,7 +49,7 @@
             const data = JSON.parse(raw);
             if (data.paneId === targetPaneId && data.path === targetPath) return;
 
-            $wire.handleInternalDrop(data.paneId, data.path, data.name, targetPaneId, targetPath, !event.ctrlKey);
+            $wire.handleInternalDrop(data.paneId, data.path, data.name, targetPaneId, targetPath, !event.ctrlKey, data.type === 'dir');
         },
         previewUrl: null,
         previewName: null,
@@ -92,7 +92,7 @@
             </div>
 
             @if ($machines->isNotEmpty())
-                <form x-on:submit.prevent="runGlobalSearch()" class="flex items-center gap-1.5 px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg w-full sm:w-[26rem]">
+                <form x-on:submit.prevent="runGlobalSearch()" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-stone-200 rounded-lg w-full sm:w-[26rem]">
                     <svg x-show="!currentlySearching" class="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <svg x-show="currentlySearching" x-cloak class="w-3.5 h-3.5 text-tan-500 shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     <input
@@ -111,7 +111,7 @@
 
             @if ($machines->isNotEmpty())
                 <div x-data="{ open: false }" class="relative">
-                    <button @click="open = !open" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-white text-sm font-medium rounded-lg shadow-soft transition">
+                    <button @click="open = !open" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Open Machine
                     </button>
@@ -245,10 +245,10 @@
                         <!-- Toolbar -->
                         <div class="flex items-center gap-2 px-3 py-2 border-b border-stone-100">
                             @if ($canWrite)
-                                <button wire:click="createFolder('{{ $pane['id'] }}')" @disabled($pane['path'] === null) class="text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                <button wire:click="createFolder('{{ $pane['id'] }}')" @disabled($pane['path'] === null) class="text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
                                     + Folder
                                 </button>
-                                <label @class(['text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition cursor-pointer', 'opacity-40 pointer-events-none' => $pane['path'] === null]) x-on:click="$wire.setUploadTarget('{{ $pane['id'] }}')">
+                                <label @class(['text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition cursor-pointer', 'opacity-40 pointer-events-none' => $pane['path'] === null]) x-on:click="$wire.setUploadTarget('{{ $pane['id'] }}')">
                                     Upload
                                     <input type="file" multiple class="hidden" wire:model="uploadFiles">
                                 </label>
@@ -267,7 +267,7 @@
                                 type="text"
                                 wire:model="searchQueries.{{ $pane['id'] }}"
                                 placeholder="Search this folder…"
-                                class="flex-1 text-xs border-0 focus:ring-0 p-0 bg-transparent placeholder:text-stone-400"
+                                class="flex-1 text-xs border-0 focus:ring-0 px-2 py-1 rounded bg-transparent placeholder:text-stone-400"
                             >
                             @if (isset($searchResults[$pane['id']]))
                                 <button type="button" wire:click="clearSearch('{{ $pane['id'] }}')" class="text-xs text-stone-400 hover:text-stone-600">Clear</button>
