@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RelayTransferJob;
 use App\Livewire\Explorer\Index;
 use App\Models\Machine;
 use App\Models\RelayTransfer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -308,5 +310,51 @@ class FolderTransferTest extends TestCase
             ->assertSet('panes.0.error', null);
 
         $this->assertSame('AAA', $this->fs['linux-box']['/home/me/Photos-old/Photos/a.jpg']);
+    }
+
+    public function test_a_large_file_relays_through_a_temp_file_that_is_cleaned_up_afterwards(): void
+    {
+        $this->fakeAgents();
+        $user = User::factory()->create();
+        $linux = $this->machine('linux-box', 'linux', $user);
+        $windows = $this->machine('win-box', 'windows', $user);
+        $big = random_bytes(8 * 1024 * 1024);
+        $this->fs['linux-box'] = ['/' => null, '/data' => null, '/data/backup.zip' => $big];
+        $this->fs['win-box'] = ['E:' => null, 'E:\\Crash Automation' => null];
+        $tempsBefore = glob(sys_get_temp_dir().'/lanhub-relay-*');
+
+        $this->drop($user, $linux, '/data/backup.zip', 'backup.zip', $windows, 'E:\\Crash Automation', true, false);
+
+        $relay = RelayTransfer::firstOrFail();
+        $this->assertSame('done', $relay->status);
+        $this->assertSame(strlen($big), $relay->bytes_transferred);
+        $this->assertTrue($this->fs['win-box']['E:\\Crash Automation\\backup.zip'] === $big, 'relayed file contents differ');
+        $this->assertSame($tempsBefore, glob(sys_get_temp_dir().'/lanhub-relay-*'));
+    }
+
+    public function test_a_transfer_whose_worker_died_is_marked_failed_instead_of_staying_in_progress(): void
+    {
+        $user = User::factory()->create();
+        $source = $this->machine('linux-box', 'linux', $user);
+        $destination = $this->machine('win-box', 'windows', $user);
+        $stuck = RelayTransfer::create([
+            'user_id' => $user->id, 'kind' => 'copy', 'status' => 'downloading', 'started_at' => now(),
+            'source_machine_id' => $source->id, 'source_path' => '/data/backup.zip',
+            'destination_machine_id' => $destination->id, 'destination_path' => 'E:\\backup.zip',
+        ]);
+        $finished = RelayTransfer::create([
+            'user_id' => $user->id, 'kind' => 'copy', 'status' => 'done', 'completed_at' => now(),
+            'source_machine_id' => $source->id, 'source_path' => '/data/old.zip',
+            'destination_machine_id' => $destination->id, 'destination_path' => 'E:\\old.zip',
+        ]);
+
+        $error = new MaxAttemptsExceededException('App\\Jobs\\RelayTransferJob has been attempted too many times.');
+        (new RelayTransferJob($stuck->id))->failed($error);
+        (new RelayTransferJob($finished->id))->failed($error);
+
+        $this->assertSame('error', $stuck->fresh()->status);
+        $this->assertStringContainsString('stopped unexpectedly', $stuck->fresh()->error);
+        $this->assertNotNull($stuck->fresh()->completed_at);
+        $this->assertSame('done', $finished->fresh()->status);
     }
 }

@@ -105,23 +105,43 @@ class RelayTransferJob implements ShouldQueue
         }
     }
 
-    /** Download one file from the source agent and upload it to the destination. */
+    /**
+     * Called by the queue when the job dies without handle() getting to
+     * record it - e.g. the worker was killed or restarted mid-transfer and
+     * the job was then failed for exceeding its tries. Without this the
+     * relay stayed "downloading" forever.
+     */
+    public function failed(?\Throwable $e): void
+    {
+        $relay = RelayTransfer::find($this->relayTransferId);
+
+        if ($relay && ! in_array($relay->status, ['done', 'error'], true)) {
+            $relay->update([
+                'status' => 'error',
+                'error' => 'The transfer stopped unexpectedly before it finished. Nothing was deleted - try it again.',
+                'completed_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Download one file from the source agent to a temp file on the hub's
+     * disk, then upload it to the destination. Never held in memory, so file
+     * size is limited only by the hub's free disk space.
+     */
     private function relayFile(RelayTransfer $relay, Machine $source, string $sourcePath, Machine $destination, string $destinationPath): void
     {
-        $temp = tmpfile();
-        $meta = stream_get_meta_data($temp);
+        $tempPath = tempnam(sys_get_temp_dir(), 'lanhub-relay-');
 
         try {
-            $response = $source->agent()->download($sourcePath);
-            $body = $response->body();
-            fwrite($temp, $body);
-            rewind($temp);
+            $response = $source->agent()->downloadTo($sourcePath, $tempPath);
 
-            $this->bytes += strlen($body);
+            clearstatcache(true, $tempPath);
+            $this->bytes += filesize($tempPath);
             $relay->update(['status' => 'uploading', 'bytes_transferred' => $this->bytes]);
 
             $uploaded = new UploadedFile(
-                $meta['uri'],
+                $tempPath,
                 basename(str_replace('\\', '/', $destinationPath)),
                 $response->header('Content-Type'),
                 null,
@@ -133,7 +153,7 @@ class RelayTransferJob implements ShouldQueue
 
             $destination->agent()->upload($destinationDir, $uploaded);
         } finally {
-            fclose($temp);
+            @unlink($tempPath);
         }
     }
 

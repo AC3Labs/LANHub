@@ -65,9 +65,23 @@ class AgentClient
             ->throw($this->throwHandler());
     }
 
+    /**
+     * Saves a file from the agent straight to $localPath on the hub's disk
+     * instead of into PHP's memory. A cross-machine relay used to go through
+     * body(), and a 98 MB file blew the container's 128 MB memory_limit,
+     * killing the queue worker mid-transfer.
+     */
+    public function downloadTo(string $path, string $localPath): Response
+    {
+        return $this->transferRequest()
+            ->withOptions(['sink' => $localPath])
+            ->get('/api/download', ['path' => $path])
+            ->throw($this->throwHandler());
+    }
+
     public function upload(string $destinationDir, UploadedFile $file): array
     {
-        return $this->request()
+        return $this->transferRequest()
             ->attach('file', fopen($file->getRealPath(), 'r'), $file->getClientOriginalName())
             ->post('/api/upload?'.http_build_query(['path' => $destinationDir]))
             ->throw($this->throwHandler())
@@ -203,6 +217,22 @@ class AgentClient
                 $response->status(),
             );
         };
+    }
+
+    /**
+     * request()'s 15s timeout is a cap on the whole request, which is right
+     * for quick API calls but cuts off any file that takes longer than that
+     * to move over Wi-Fi. File transfers get no overall limit; instead they
+     * give up if they stall (under 1 KB/s for 60s).
+     */
+    private function transferRequest(): PendingRequest
+    {
+        return $this->request()
+            ->timeout(0)
+            ->withOptions(['curl' => [
+                CURLOPT_LOW_SPEED_LIMIT => 1024,
+                CURLOPT_LOW_SPEED_TIME => 60,
+            ]]);
     }
 
     private function request(): PendingRequest
