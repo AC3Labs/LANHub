@@ -3,6 +3,52 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.9.0.0] - 2026-10-11
+
+Pull it, start it, and it works — no Docker knowledge, no edits to the
+compose file.
+
+### Added
+- Log in with an authenticator app (Google Authenticator, Microsoft
+  Authenticator, Authy, 1Password, or any TOTP app) instead of an emailed
+  code. Set it up from the Profile page by scanning a QR code; you get 8
+  one-time recovery codes for a lost phone. Users with an app set up are
+  asked for its 6-digit code at login (each code works once) and can still
+  choose "Email me a code instead" when email is configured.
+- The setup wizard now sends the new admin straight to authenticator setup.
+  Before, a fresh install with no email configured locked its admin out on
+  their first logout, because the login code only went to the server log.
+- A "Before you log out" banner appears for anyone who has no way to get a
+  login code (no authenticator app, and email not set up).
+- `php artisan lanhub:reset-authenticator {email}` removes someone's
+  authenticator app if they lose their phone and their recovery codes.
+- A "Hub address" setting on the Settings page, used for links in invite
+  and password-reset emails. It's filled in automatically from the address
+  the admin uses during setup (or on their next login for existing
+  installs).
+
+### Fixed
+- A fresh install sent every browser to `http://localhost:8000/...` unless
+  `APP_URL` was edited by hand, so pages failed to load or showed no styling
+  on any other computer. This is what broke a real Dokploy deployment. The
+  hub now works out its own address from each request: IP, hostname, port,
+  or a reverse proxy's domain and HTTPS (Dokploy, Traefik, Caddy, nginx).
+  The root cause was Debian nginx 1.26's `fastcgi_params` setting
+  `HTTP_HOST` to `$host`, which drops the port. The nginx config now passes
+  the real `Host` header through.
+- Links in password-reset and invite emails are never built from the
+  request's Host header, so a forged header can't get a link to someone
+  else's server emailed to a user.
+
+### Changed
+- The default port in `docker-compose.yml` is now `8949` instead of `8000`.
+  Port 8000 is often already taken (Portainer and others), which made Docker
+  fail with "port is already allocated."
+- `APP_URL` is optional. A deliberately set address still overrides the
+  automatic one; the old `http://localhost...` placeholder is ignored.
+- The README install steps were rewritten for people new to Docker, and now
+  cover Dokploy/Coolify/Portainer and common error messages.
+
 ## [0.8.2.0] - 2026-09-20
 
 ### Fixed
