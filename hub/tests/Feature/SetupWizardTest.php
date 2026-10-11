@@ -23,7 +23,7 @@ class SetupWizardTest extends TestCase
             ->set('password_confirmation', 'a-real-password')
             ->call('create')
             ->assertHasNoErrors()
-            ->assertRedirect(route('settings'));
+            ->assertRedirect(route('profile').'#authenticator');
 
         $user = User::where('email', 'first-admin@example.test')->firstOrFail();
         $this->assertTrue($user->is_admin);

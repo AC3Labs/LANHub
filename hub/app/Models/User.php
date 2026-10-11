@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\ResetPasswordNotification;
+use App\Support\Authenticator;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -14,7 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_code', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -33,6 +34,9 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'invite_token_expires_at' => 'datetime',
             'two_factor_expires_at' => 'datetime',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
@@ -89,6 +93,59 @@ class User extends Authenticatable
     public function clearTwoFactorCode(): void
     {
         $this->forceFill(['two_factor_code' => null, 'two_factor_expires_at' => null])->save();
+    }
+
+    /**
+     * Logs in with an authenticator app (6-digit code) instead of an
+     * emailed code. Only counts once the user has confirmed setup by
+     * entering a code from their app.
+     */
+    public function hasAuthenticator(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Accepts a current authenticator code (each one works only once) or
+     * an unused recovery code (removed after use).
+     */
+    public function verifyAuthenticatorCode(string $code): bool
+    {
+        if (! $this->hasAuthenticator()) {
+            return false;
+        }
+
+        $step = Authenticator::verify($this->two_factor_secret, $code, $this->two_factor_last_used_step);
+
+        if ($step !== null) {
+            $this->forceFill(['two_factor_last_used_step' => $step])->save();
+
+            return true;
+        }
+
+        $recovery = Authenticator::normalizeRecoveryCode($code);
+        $remaining = $this->two_factor_recovery_codes ?? [];
+
+        foreach ($remaining as $i => $stored) {
+            if (hash_equals($stored, $recovery)) {
+                unset($remaining[$i]);
+                $this->forceFill(['two_factor_recovery_codes' => array_values($remaining)])->save();
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function removeAuthenticator(): void
+    {
+        $this->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+            'two_factor_last_used_step' => null,
+        ])->save();
     }
 
     public function sendPasswordResetNotification($token): void

@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Mail\TwoFactorCodeMail;
 use App\Models\Setting;
+use App\Support\PublicUrl;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Layout;
@@ -38,6 +39,12 @@ class Index extends Component
 
     public ?string $testEmailStatus = null;
 
+    // Base address for links inside emails - see App\Support\PublicUrl.
+    public string $hubAddress = '';
+
+    // Set when APP_URL is configured on the server, which overrides this.
+    public ?string $hubAddressFromEnv = null;
+
     public function mount(): void
     {
         abort_unless(Auth::user()->is_admin, 403);
@@ -48,6 +55,29 @@ class Index extends Component
         $this->smtpEncryption = Setting::get('smtp_encryption', 'tls') ?: 'none';
         $this->smtpFromAddress = Setting::get('smtp_from_address', '') ?? '';
         $this->smtpFromName = Setting::get('smtp_from_name', config('app.name')) ?? '';
+
+        $this->hubAddressFromEnv = PublicUrl::configured();
+        $this->hubAddress = PublicUrl::stored() ?? '';
+    }
+
+    public function saveHubAddress(): void
+    {
+        abort_unless(Auth::user()->is_admin, 403);
+
+        $this->hubAddress = rtrim(trim($this->hubAddress), '/');
+        $this->validateOnly('hubAddress', ['hubAddress' => 'nullable|url:http,https|max:255']);
+
+        PublicUrl::store($this->hubAddress ?: null);
+
+        session()->flash('hubAddressStatus', 'Hub address saved.');
+    }
+
+    public function useCurrentAddress(): void
+    {
+        abort_unless(Auth::user()->is_admin, 403);
+
+        $this->hubAddress = request()->getSchemeAndHttpHost();
+        $this->resetErrorBag('hubAddress');
     }
 
     public function save(): void

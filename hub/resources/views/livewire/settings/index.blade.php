@@ -2,11 +2,38 @@
     <div class="bg-paper border-b border-stone-200">
         <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <h2 class="font-semibold text-xl text-stone-800">Settings</h2>
-            <p class="text-sm text-stone-500 mt-1">Configure outgoing mail for invites, login codes, and password resets.</p>
+            <p class="text-sm text-stone-500 mt-1">The hub's address and outgoing mail for invites, login codes, and password resets.</p>
         </div>
     </div>
 
-    <div class="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+        <div class="rounded-xl bg-paper shadow-soft border border-stone-200 p-6">
+            <h3 class="font-medium text-stone-800 mb-1">Hub address</h3>
+            <p class="text-sm text-stone-500 mb-4">The address people use to reach LANHub. It's used for the links in invite and password-reset emails &mdash; pages themselves work at any address.</p>
+
+            @if ($hubAddressFromEnv)
+                <p class="text-sm text-stone-600">Set on the server (<code class="text-xs bg-stone-100 rounded px-1 py-0.5">APP_URL</code>): <span class="font-medium">{{ $hubAddressFromEnv }}</span></p>
+            @else
+                @if (session('hubAddressStatus'))
+                    <div class="mb-4 text-sm font-medium text-green-600">{{ session('hubAddressStatus') }}</div>
+                @endif
+
+                <form wire:submit="saveHubAddress" class="space-y-3">
+                    <div>
+                        <x-input-label for="hubAddress" value="Address" />
+                        <x-text-input id="hubAddress" wire:model="hubAddress" class="mt-1 block w-full" placeholder="http://192.168.1.10:8949" />
+                        <x-input-error :messages="$errors->get('hubAddress')" class="mt-1" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button type="button" wire:click="useCurrentAddress" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50 transition">
+                            Use the address I'm on now
+                        </button>
+                        <x-primary-button>Save</x-primary-button>
+                    </div>
+                </form>
+            @endif
+        </div>
+
         <div class="rounded-xl bg-paper shadow-soft border border-stone-200 p-6">
             <h3 class="font-medium text-stone-800 mb-1">SMTP</h3>
             <p class="text-sm text-stone-500 mb-4">Without this configured, mail falls back to being written to the server log only — nobody actually receives it.</p>

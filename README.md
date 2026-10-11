@@ -20,7 +20,8 @@ across Windows and Linux.
   conflict detection — never silently overwrites a file that changed
   since it was last scanned.
 - Invite-only multi-user access with per-machine read-only/full sharing,
-  and email-based two-factor login.
+  and two-factor login with an authenticator app (Google Authenticator,
+  Authy, 1Password…) or an emailed code.
 - Disk-space monitoring and online/offline alerting via a free ntfy.sh
   push notification.
 - An activity log, a per-machine agents page (live health, transfer
@@ -41,61 +42,65 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 
 ## Requirements
 
-- Docker (for the hub).
+- Docker on an x86-64 (Intel/AMD) server, for the hub.
 - Nothing extra on the machines you want to browse — the agent is a
   single static binary (Windows and Linux, `agent/dist/`).
-- An SMTP account for outgoing mail (invites, login codes, password
-  resets) — any provider works. Without one configured, mail just gets
-  written to the server log instead of actually being delivered.
+- Optional: an SMTP account for outgoing mail (inviting other people,
+  password resets, emailed login codes). Any provider works. You can use
+  LANHub on your own without it by logging in with an authenticator app.
 
 ## Setup
 
 ### 1. Run the hub
 
-Just `docker-compose.yml` is needed — no `.env` file, no key-generation
-step. It pulls a prebuilt image (published automatically from this
-repo), so this works on any docker-compose-driven platform (Dokploy,
-Portainer, Coolify, plain `docker compose up`) without cloning the repo
-at all:
+You only need one file, `docker-compose.yml`, and you don't have to edit it.
+It pulls a prebuilt image, so you don't need to clone this repo, create a
+`.env` file, or generate any keys.
+
+**Plain Docker** (any Linux server, x86-64):
 
 ```
 curl -O https://raw.githubusercontent.com/ac3labs/lanhub/main/docker-compose.yml
-```
-
-Open it and change `APP_URL` to how you'll reach the hub (e.g.
-`http://192.168.1.10:8000`), then:
-
-```
 docker compose up -d
 ```
 
-That's it — first start runs migrations and generates its own encryption
-key automatically (saved in the `hub_db` volume, so it survives restarts
-and updates without you doing anything). Everything else in the file is
-optional, for when you want it: pin your own `APP_KEY`, change the
-container-internal port for a platform that needs it, etc. — see the
-comments in `docker-compose.yml`.
+Then open `http://<your-server's-IP>:8949` in a browser.
 
-Open the URL you set in `APP_URL` — a fresh install (zero users) shows a
-setup wizard automatically, right there in the browser. Create your
-account and you're straight in as an admin; it walks you into
-**Settings** next to configure SMTP so invites, login codes, and
-password resets actually get delivered (you can skip that and come back
-to it later).
+**Dokploy, Coolify, Portainer and similar:** create a new Docker Compose
+app and paste in the contents of
+[`docker-compose.yml`](docker-compose.yml) unchanged. Deploy it, then open
+`http://<your-server's-IP>:8949`. To use a domain instead, add it in
+your platform's domain settings, pointing at service `hub`, port `8000`.
 
-(The wizard only appears once — on a fresh install with zero users. To
-add more people afterward, use the Users page instead; self-registration
-is deliberately disabled. If you'd rather script this step, `docker
-compose exec -u www-data hub php artisan lanhub:create-admin` does the
-same thing from the command line.)
+The first time you open it you'll see a setup screen. Create your account
+there and you're logged in as the admin. Every login after that asks for a
+one-time code, so it takes you straight to setting up an **authenticator
+app**: scan a QR code with Google Authenticator, Microsoft Authenticator,
+Authy, 1Password or similar, and type in the code it shows. Save the
+recovery codes it gives you in case you lose your phone. Later, set up
+outgoing email under **Settings** so you can invite other people.
 
-**Using a different port?** If you just want the hub reachable on a
-different *host* port, change the left-hand side of `docker-compose.yml`'s
-`ports:` mapping (e.g. `"8949:8000"`) — nothing else needs to change. Some
-platforms (Dokploy and similar) instead route to a specific
-container-internal port; for that, set the `PORT` environment variable in
-`docker-compose.yml` and update the container side (right-hand side) of
-the `ports:` mapping to match.
+Everything else is automatic. The database and encryption key are
+created on first start and kept in the `hub_db` volume, so they survive
+restarts and updates. LANHub works out its own address from however you
+reach it: an IP, a hostname, a different port, or a domain with HTTPS
+through a reverse proxy. You don't have to configure it anywhere.
+
+(The setup screen only appears on a brand-new install. To add more people
+later, use the **Users** page; people can't sign themselves up. To script
+this step instead, run `docker compose exec -u www-data hub php artisan
+lanhub:create-admin`.)
+
+**If it doesn't start:**
+
+- *"port is already allocated"* means another program on your server is
+  already using port 8949. In `docker-compose.yml`, change the left-hand
+  number under `ports:`, e.g. `"8950:8000"`. Deploy again and browse to
+  that port instead.
+- *"no matching manifest"* means your server isn't x86-64 (for example a
+  Raspberry Pi or other ARM device). Only x86-64 is published right now.
+- Anything else: run `docker compose logs hub`. The hub explains what's
+  wrong in plain language, either in that log or on the page itself.
 
 ### 2. Install an agent on each machine you want to browse
 
@@ -116,7 +121,11 @@ sudo install/install-linux.sh        # or install/install-windows.ps1 as Adminis
 - Agent-to-hub HTTPS uses self-signed certificates (there's no public CA
   involved) — see the `--tls`/`-Tls` install flags in `agent/README.md`.
 - Two-factor login is required for every user on every login; there is no
-  "remember this device" bypass.
+  "remember this device" bypass. Each user picks an authenticator app or
+  emailed codes. If someone loses their phone and their recovery codes, an
+  admin can run `docker compose exec -u www-data hub php artisan
+  lanhub:reset-authenticator their@email` to switch them back to emailed
+  codes.
 
 ## Development
 

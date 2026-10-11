@@ -9,26 +9,38 @@ services:
     # line for `build: ./hub`.
     image: ghcr.io/ac3labs/lanhub:latest
     restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      # How you'll reach the hub in a browser — change this to your
-      # server's real address (e.g. http://192.168.1.10:8000).
-      APP_URL: http://localhost:8000
 
-      # Optional. If you leave this out, the hub generates one itself on
-      # first start and saves it in the hub_db volume below, so it stays
-      # stable across restarts and updates without you doing anything.
-      # Set it yourself only if you want to pin a specific key (e.g. to
-      # move an existing database to a new container from scratch):
+    # Nothing in this file needs editing. Start it, then open
+    # http://<this-server's-IP>:8949 in a browser.
+    ports:
+      # If 8949 is already used by something else on your server, change
+      # only the left-hand number (e.g. "8950:8000") and open that port
+      # instead. Using Dokploy/Coolify with a domain? You can delete these
+      # two lines and point the domain at port 8000 instead.
+      - "8949:8000"
+
+    environment:
+      # Nothing here needs changing. LANHub works out its own address from
+      # how you reach it (IP, hostname, port, or a domain through a reverse
+      # proxy). The commented-out lines are optional extras.
+
+      # Pin the address used in links inside emails (invites, password
+      # resets). Normally not needed: it's recorded automatically during
+      # first-run setup and can be changed later on the Settings page.
+      # APP_URL: https://lanhub.example.com
+
+      # Pin a specific encryption key. If left out, one is generated on
+      # first start and saved in the hub_db volume, so it survives restarts
+      # and updates. Only set this to move an existing database to a new
+      # container from scratch.
       # APP_KEY: "base64:..."
 
-      # Uncommon: only needed if your platform (Dokploy and similar)
-      # routes to a specific container-internal port rather than just
-      # remapping the host side of `ports:` below. If you just want a
-      # different port on the host, change the left-hand side of
-      # `ports:` instead (e.g. "8949:8000") — leave this alone.
-      # PORT: "8000"
+      # The port LANHub listens on inside the container. Leave it alone —
+      # to change the port you browse to, change the left-hand number
+      # under `ports:` above instead. (Only platforms that route to a
+      # specific container-internal port ever need this changed.)
+      PORT: "8000"
+
     volumes:
       # The only thing that needs to persist — your database (and the
       # auto-generated APP_KEY above, if you didn't set your own).

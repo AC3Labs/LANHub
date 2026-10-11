@@ -56,8 +56,15 @@ class LoginForm extends Form
             ]);
         }
 
-        $code = $user->generateTwoFactorCode();
-        Mail::to($user->email)->send(new TwoFactorCodeMail($code));
+        // Authenticator-app users type the code from their app instead of
+        // waiting for an email (they can still ask for one on the next page).
+        if ($user->hasAuthenticator()) {
+            Session::put('2fa.method', 'app');
+        } else {
+            $code = $user->generateTwoFactorCode();
+            Mail::to($user->email)->send(new TwoFactorCodeMail($code));
+            Session::put('2fa.method', 'email');
+        }
 
         Session::put('2fa.user_id', $user->id);
         Session::put('2fa.remember', $this->remember);

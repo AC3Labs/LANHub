@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Support\PublicUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -37,7 +38,7 @@ class UserInvitation extends Mailable
             view: 'emails.user-invitation',
             with: [
                 'name' => $this->user->name,
-                'setPasswordUrl' => url('/set-password/'.$this->user->invite_token),
+                'setPasswordUrl' => PublicUrl::to('/set-password/'.$this->user->invite_token),
             ],
         );
     }

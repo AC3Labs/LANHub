@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\PublicUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Notifications\Notification;
@@ -28,7 +29,9 @@ class ResetPasswordNotification extends Notification
 
     public function toMail(object $notifiable): Mailable
     {
-        $url = url(route('password.reset', [
+        // Never built from the request: a reset can be requested by anyone,
+        // with any Host header - see PublicUrl.
+        $url = PublicUrl::to(route('password.reset', [
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
         ], false));

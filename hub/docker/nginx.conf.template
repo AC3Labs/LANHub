@@ -16,6 +16,12 @@ server {
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        # Debian's nginx (1.26+) fastcgi_params sets HTTP_HOST to $host,
+        # which drops the port - so every generated link and asset URL lost
+        # e.g. :8949 and broke unless APP_URL was set by hand. Pass the
+        # browser's Host header through instead (port included). Safe here:
+        # emails never build links from it (see App\Support\PublicUrl).
+        fastcgi_param HTTP_HOST $http_host;
         fastcgi_read_timeout 300;
     }
 

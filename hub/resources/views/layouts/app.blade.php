@@ -42,6 +42,20 @@
         <div class="min-h-screen flex flex-col bg-stone-100">
             <livewire:layout.navigation />
 
+            {{-- Every login needs a code. With no authenticator app and no
+                 working email, this person couldn't get one next time. --}}
+            @auth
+                @if (! auth()->user()->hasAuthenticator() && ! \App\Models\Setting::mailConfigured())
+                    <div class="bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
+                        <div class="max-w-7xl mx-auto py-2.5 px-4 sm:px-6 lg:px-8">
+                            <span class="font-medium">Before you log out:</span>
+                            you have no way to receive a login code yet.
+                            <a href="{{ route('profile') }}#authenticator" class="underline font-medium">Set up an authenticator app</a>@if (auth()->user()->is_admin), or <a href="{{ route('settings') }}" class="underline font-medium">set up email</a>@endif.
+                        </div>
+                    </div>
+                @endif
+            @endauth
+
             @if (isset($header))
                 <header class="bg-paper border-b border-stone-200">
                     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">

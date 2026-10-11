@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Setting;
 use App\Support\Diagnostics\Runtime\Http\RequestContextMiddleware;
+use App\Support\PublicUrl;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -23,13 +24,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Behind the nginx -> PHP-FPM FastCGI handoff, Symfony's request-based
-        // port detection doesn't reliably see the real port (falls back to
-        // treating it as the default for the scheme), so every url()/route()
-        // call would otherwise silently drop :8000. Force the configured
-        // APP_URL as the root instead of trusting request-based detection.
-        if (config('app.url')) {
-            URL::forceRootUrl(config('app.url'));
+        // URLs come from the request itself (host, port, and - via trusted
+        // proxies in bootstrap/app.php - a reverse proxy's domain/HTTPS), so
+        // a fresh install works at whatever address it's reached on. A real
+        // APP_URL, if the deployer set one, still wins - see PublicUrl.
+        if ($url = PublicUrl::configured()) {
+            URL::forceRootUrl($url);
+
+            if (str_starts_with($url, 'https://')) {
+                URL::forceScheme('https');
+            }
         }
 
         $this->applySmtpSettingsFromDatabase();

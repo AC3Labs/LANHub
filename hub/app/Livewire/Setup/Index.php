@@ -3,6 +3,7 @@
 namespace App\Livewire\Setup;
 
 use App\Models\User;
+use App\Support\PublicUrl;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
@@ -67,9 +68,15 @@ class Index extends Component
         Auth::login($user);
         session()->regenerate();
 
-        session()->flash('status', 'Your account is ready. Configure outgoing email below so invites and login codes can actually be delivered — or skip it and set this up later.');
+        // The address the admin is using right now is the one invite and
+        // password-reset emails should link to (editable later in Settings).
+        PublicUrl::rememberFrom(request());
 
-        $this->redirect(route('settings'), navigate: true);
+        // Every later login needs a code, and email isn't set up yet - so
+        // the first stop is the authenticator app, which works without it.
+        session()->flash('status', 'authenticator-first');
+
+        $this->redirect(route('profile').'#authenticator', navigate: false);
     }
 
     public function render()

@@ -14,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
+
+        // Behind Dokploy/Traefik/Caddy/nginx etc., use the proxy's real
+        // domain, port and HTTPS for generated URLs - otherwise a site
+        // served over https gets http:// asset links and the browser
+        // blocks them. The hub isn't meant to be exposed to the internet
+        // directly, and email links never use request-derived addresses
+        // (see App\Support\PublicUrl), so trusting any proxy is safe here.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
