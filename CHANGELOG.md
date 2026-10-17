@@ -3,6 +3,23 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.9.3.0] - 2026-10-17
+
+### Fixed
+- Downloading a file from Explorer to your browser no longer fails on large
+  files. The hub loaded the whole file into memory and packed it into the
+  page's reply, so anything over about 30 MB ran out of PHP's 128 MB limit
+  and failed (a 50 MB file did). Download is now an ordinary browser
+  download that the hub streams straight through from the agent, so you
+  get the browser's progress bar and cancel button, and memory stays flat
+  (a 500 MB file used about 55 MB on the hub). Previews stream the same way.
+- An interrupted download now shows as failed in the browser instead of
+  being saved as a shorter file, and cancelling stops the transfer from
+  the agent straight away.
+- Downloads and previews no longer give up after 15 seconds; they only give
+  up if no data arrives for a minute. An agent that can't be reached now
+  shows a clear error page.
+
 ## [0.9.2.1] - 2026-10-11
 
 ### Fixed

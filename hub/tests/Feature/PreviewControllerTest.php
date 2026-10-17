@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Machine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -32,7 +33,8 @@ class PreviewControllerTest extends TestCase
         $response->assertHeader('Content-Type', 'text/plain; charset=utf-8');
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertDontSee('text/html', false);
-        $response->assertSee('<html><script>alert(1)</script></html>', false);
+        $this->assertSame('<html><script>alert(1)</script></html>', $response->streamedContent());
+        $response->assertHeader('X-Accel-Buffering', 'no');
     }
 
     public function test_it_denies_a_user_with_no_access_to_the_machine(): void
@@ -58,5 +60,31 @@ class PreviewControllerTest extends TestCase
         $this->actingAs($user)
             ->get("/machines/{$machine->id}/preview?path=/archive.zip")
             ->assertStatus(415);
+    }
+
+    public function test_an_unreachable_agent_is_a_502(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('Connection refused'));
+
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $machine->users()->attach($user, ['role' => 'read_only']);
+
+        $this->actingAs($user)
+            ->get("/machines/{$machine->id}/preview?path=/photo.jpg")
+            ->assertStatus(502);
+    }
+
+    public function test_a_missing_file_is_a_404(): void
+    {
+        Http::fake(['*/api/preview*' => Http::response(['message' => 'not a file'], 404)]);
+
+        $user = User::factory()->create();
+        $machine = Machine::factory()->create();
+        $machine->users()->attach($user, ['role' => 'read_only']);
+
+        $this->actingAs($user)
+            ->get("/machines/{$machine->id}/preview?path=/gone.jpg")
+            ->assertNotFound();
     }
 }

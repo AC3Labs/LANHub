@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PreviewController;
 use App\Livewire\Agents\Log;
@@ -49,6 +50,10 @@ Route::get('sync-rules', App\Livewire\SyncRules\Index::class)
 Route::get('machines/{machine}/preview', [PreviewController::class, 'show'])
     ->middleware(['auth'])
     ->name('preview');
+
+Route::get('machines/{machine}/download', [DownloadController::class, 'show'])
+    ->middleware(['auth'])
+    ->name('download');
 
 Route::get('users', App\Livewire\Users\Index::class)
     ->middleware(['auth', 'admin'])

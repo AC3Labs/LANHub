@@ -372,7 +372,7 @@
                                                     <div x-show="menu" @click.outside="menu = false" x-transition x-cloak :style="'top: ' + menuY + 'px; left: ' + menuX + 'px;'" class="fixed w-40 bg-paper rounded-lg shadow-panel ring-1 ring-stone-200 py-1 z-40 text-left">
                                                         @if ($entry['type'] === 'file')
                                                             <button x-on:click="openPreview({{ $pane['machine_id'] }}, '{{ addslashes($entry['path']) }}', '{{ addslashes($entry['name']) }}'); menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Preview</button>
-                                                            <button wire:click="downloadEntry('{{ $pane['id'] }}', '{{ addslashes($entry['path']) }}')" x-on:click="menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Download</button>
+                                                            <a href="{{ route('download', $pane['machine_id']) }}?path={{ urlencode($entry['path']) }}" download x-on:click="menu = false" class="block w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Download</a>
                                                         @endif
                                                         @if ($entry['type'] !== 'drive' && $canWrite)
                                                             <button wire:click="startRename('{{ $pane['id'] }}', '{{ addslashes($entry['path']) }}')" x-on:click="menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Rename</button>

@@ -226,21 +226,6 @@ class Index extends Component
         $this->loadPane($index);
     }
 
-    public function downloadEntry(string $paneId, string $path)
-    {
-        $index = $this->paneIndex($paneId);
-        $machine = Machine::findOrFail($this->panes[$index]['machine_id']);
-        $this->requireAccess($machine);
-
-        $response = $machine->agent()->download($path);
-        $filename = basename(str_replace('\\', '/', $path));
-
-        return response()->streamDownload(
-            fn () => print ($response->body()),
-            $filename
-        );
-    }
-
     /**
      * Drop a row (drag source) onto a directory (drop target). Default drag copies;
      * holding Ctrl moves (deletes the source after a successful transfer). Works for

@@ -59,8 +59,7 @@ class AgentClient
 
     public function download(string $path): Response
     {
-        return $this->request()
-            ->withOptions(['stream' => true])
+        return $this->streamRequest()
             ->get('/api/download', ['path' => $path])
             ->throw($this->throwHandler());
     }
@@ -120,8 +119,7 @@ class AgentClient
 
     public function preview(string $path): Response
     {
-        return $this->request()
-            ->withOptions(['stream' => true])
+        return $this->streamRequest()
             ->get('/api/preview', ['path' => $path])
             ->throw($this->throwHandler());
     }
@@ -233,6 +231,19 @@ class AgentClient
                 CURLOPT_LOW_SPEED_LIMIT => 1024,
                 CURLOPT_LOW_SPEED_TIME => 60,
             ]]);
+    }
+
+    /**
+     * For responses passed on to the browser a chunk at a time. Guzzle's
+     * 'stream' option switches to its PHP-stream handler, which rejects the
+     * cURL options transferRequest() uses, so the stall check here is
+     * read_timeout instead: give up if no bytes arrive for 60s.
+     */
+    private function streamRequest(): PendingRequest
+    {
+        return $this->request()
+            ->timeout(0)
+            ->withOptions(['stream' => true, 'read_timeout' => 60]);
     }
 
     private function request(): PendingRequest

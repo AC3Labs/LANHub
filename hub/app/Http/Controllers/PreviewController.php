@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\AgentException;
 use App\Models\Machine;
+use App\Support\AgentStream;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +15,8 @@ use Illuminate\Support\Facades\Auth;
  * rendering the way a normal GET response can. Proxies the agent's own
  * GET /api/preview response through unchanged (content-type, inline
  * disposition, and the nosniff header it sets) rather than re-deciding
- * anything about the file here.
+ * anything about the file here. Streamed, so a large image or PDF never
+ * sits in the hub's memory.
  */
 class PreviewController extends Controller
 {
@@ -28,14 +31,14 @@ class PreviewController extends Controller
             $response = $machine->agent()->preview($path);
         } catch (AgentException $e) {
             abort(in_array($e->getCode(), [401, 403, 404, 415], true) ? $e->getCode() : 502, $e->getMessage());
+        } catch (ConnectionException) {
+            abort(502, "{$machine->name} isn't reachable right now.");
         }
 
-        $headers = array_filter([
+        return AgentStream::respond($response, [
             'Content-Type' => $response->header('Content-Type'),
             'Content-Disposition' => $response->header('Content-Disposition'),
             'X-Content-Type-Options' => $response->header('X-Content-Type-Options'),
         ]);
-
-        return response($response->body(), $response->status())->withHeaders($headers);
     }
 }
