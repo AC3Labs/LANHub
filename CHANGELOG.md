@@ -30,6 +30,10 @@ All notable changes to LANHub are recorded here. Versioned as
   with seeking, volume and full screen.
 - Image previews fit the window. Audio files play in the preview.
 - `check-mail` command to test the mail settings without sending anything.
+- Agent 1.2.0: downloads and previews can be read in parts (HTTP Range),
+  so videos seek instantly and LANHub Media reads only what it needs;
+  `/api/health` lists the agent's features. Older agents still work (the
+  hub reads past the skipped part itself).
 
 ### Fixed
 - Explorer breadcrumbs on Linux machines pointed at the wrong folders.
