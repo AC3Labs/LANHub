@@ -1,0 +1,108 @@
+{{define "content"}}
+{{$d := .Data}}
+<div x-data="ruleForm({{json $d.Form}})">
+    <div class="bg-paper border-b border-stone-200">
+        <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-xl text-stone-800">Sync Rules</h2>
+                <p class="text-sm text-stone-500 mt-1">Automatically keep a folder on one machine in sync with a folder on another.</p>
+            </div>
+            <button @click="openCreate()" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">+ New rule</button>
+        </div>
+    </div>
+    <div class="max-w-[1600px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {{if not $d.Rules}}
+            <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center"><p class="text-stone-500">No sync rules yet.</p></div>
+        {{else}}
+        <div class="rounded-xl bg-paper shadow-soft border border-stone-200 overflow-hidden divide-y divide-stone-100">
+            {{range $d.Rules}}
+            <div class="p-4 flex items-center justify-between gap-4 flex-wrap">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="font-medium text-stone-800">{{.Name}}</p>
+                        {{if .HasConflict}}<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Conflict — some files skipped</span>{{end}}
+                        {{if .LastError}}<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700" title="{{.LastError}}">Error</span>{{end}}
+                        {{if not .Enabled}}<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">Paused</span>{{end}}
+                    </div>
+                    <p class="text-xs text-stone-500 mt-1 font-mono truncate flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: {{color .SrcColor}}"></span>{{.SrcName}}:{{.SrcPath}}
+                        <span class="text-stone-300">{{if eq .Direction "mirror"}}⇄{{else}}→{{end}}</span>
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: {{color .DstColor}}"></span>{{.DstName}}:{{.DstPath}}
+                    </p>
+                    <p class="text-xs text-stone-400 mt-0.5">Every {{.Interval}} min · {{if eq .Direction "mirror"}}Mirror (deletes extras){{else}}One-way copy{{end}}{{if .LastRun}} · Last ran {{ago .LastRun}}{{end}}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <form method="post" action="/sync-rules/{{.ID}}/toggle"><input type="hidden" name="_token" value="{{$.CSRF}}"><button class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">{{if .Enabled}}Pause{{else}}Resume{{end}}</button></form>
+                    <button @click="openEdit({{json .}})" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">Edit</button>
+                    <form method="post" action="/sync-rules/{{.ID}}/delete" onsubmit="return confirm('Delete this sync rule?')"><input type="hidden" name="_token" value="{{$.CSRF}}"><button class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-red-50 transition">Delete</button></form>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <div x-show="open" x-cloak class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50" @keydown.escape.window="open = false">
+        <div class="fixed inset-0" @click="open = false"><div class="absolute inset-0 bg-stone-500 opacity-75"></div></div>
+        <div class="relative mb-6 bg-paper rounded-lg overflow-hidden shadow-xl sm:w-full sm:max-w-lg sm:mx-auto">
+            <form method="post" :action="f.id ? '/sync-rules/' + f.id : '/sync-rules'" class="p-6">
+                <input type="hidden" name="_token" value="{{.CSRF}}">
+                <h3 class="text-lg font-semibold text-stone-800 mb-4" x-text="f.id ? 'Edit sync rule' : 'New sync rule'"></h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block font-medium text-sm text-stone-700" for="name">Name</label>
+                        <input id="name" name="name" x-model="f.name" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" placeholder="Photos backup">
+                        <p x-show="errors.name" class="text-sm text-red-600 mt-1" x-text="errors.name"></p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="src">Source machine</label>
+                        <select id="src" name="source_machine_id" x-model="f.src" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400">
+                            <option value="">Select…</option>
+                            {{range $d.Machines}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+                        </select>
+                        <p x-show="errors.source_machine_id" class="text-sm text-red-600 mt-1" x-text="errors.source_machine_id"></p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="srcp">Source path</label>
+                        <input id="srcp" name="source_path" x-model="f.srcPath" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full font-mono text-sm" placeholder="/home/jsmith/Photos">
+                        <p x-show="errors.source_path" class="text-sm text-red-600 mt-1" x-text="errors.source_path"></p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="dst">Destination machine</label>
+                        <select id="dst" name="destination_machine_id" x-model="f.dst" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400">
+                            <option value="">Select…</option>
+                            {{range $d.Machines}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+                        </select>
+                        <p x-show="errors.destination_machine_id" class="text-sm text-red-600 mt-1" x-text="errors.destination_machine_id"></p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="dstp">Destination path</label>
+                        <input id="dstp" name="destination_path" x-model="f.dstPath" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full font-mono text-sm" placeholder="D:\Backups\Photos">
+                        <p x-show="errors.destination_path" class="text-sm text-red-600 mt-1" x-text="errors.destination_path"></p>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="dir">Direction</label>
+                        <select id="dir" name="direction" x-model="f.direction" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400">
+                            <option value="one_way">One-way (copy only)</option>
+                            <option value="mirror">Mirror (also deletes extras at destination)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-stone-700" for="int">Run every (minutes)</label>
+                        <input id="int" name="interval_minutes" type="number" x-model="f.interval" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full">
+                        <p x-show="errors.interval_minutes" class="text-sm text-red-600 mt-1" x-text="errors.interval_minutes"></p>
+                    </div>
+                    <div class="sm:col-span-2 flex items-center gap-2">
+                        <input id="enabled" name="enabled" type="checkbox" value="1" x-model="f.enabled" class="rounded border-stone-300 text-tan-500 focus:ring-tan-400">
+                        <label for="enabled" class="block font-medium text-sm text-stone-700">Enabled</label>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="open = false" class="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-800">Cancel</button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 transition" x-text="f.id ? 'Save changes' : 'Create rule'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}

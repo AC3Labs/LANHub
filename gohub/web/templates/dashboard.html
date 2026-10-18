@@ -1,0 +1,220 @@
+{{define "content"}}
+{{$d := .Data}}
+<div x-data="dashboard({{json $d.Edit}}, {{json $d.Form}})">
+    <div class="bg-paper border-b border-stone-200">
+        <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-xl text-stone-800">Dashboard</h2>
+                <p class="text-sm text-stone-500 mt-1">Live status, storage, and throughput across every registered machine.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button @click="refresh()" :disabled="refreshing" class="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 border border-stone-200 text-black text-sm font-medium rounded-lg shadow-soft transition disabled:opacity-60">
+                    <svg :class="refreshing && 'animate-spin'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span x-text="refreshing ? 'Refreshing…' : 'Refresh'"></span>
+                </button>
+                <button @click="openCreate()" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Machine
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-[1600px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {{if not $d.Machines}}
+            <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
+                <p class="text-stone-500">No machines registered yet.</p>
+                <button @click="openCreate()" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg transition">Add your first machine</button>
+            </div>
+        {{else}}
+        <div class="space-y-3">
+            {{range $d.Machines}}
+            {{$c := color .Color}}
+            <div x-data="{ open: false, id: {{.ID}} }" class="rounded-xl bg-paper shadow-soft border border-stone-200 overflow-hidden">
+                <button type="button" x-on:click="open = ! open" class="w-full flex items-center gap-4 px-5 py-4 text-left" style="background: linear-gradient(to right, {{$c}}14, transparent)">
+                    <div class="flex items-center gap-3 shrink-0">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white font-semibold text-sm" style="background-color: {{$c}}">{{.Initial}}</span>
+                        <p class="font-medium text-stone-800 truncate max-w-[12rem]">{{.Name}}</p>
+                    </div>
+                    <div x-show="! open" x-transition.opacity class="hidden sm:grid flex-1 grid-cols-4 gap-4 min-w-0 pl-4 ml-1 border-l border-stone-200">
+                        <div class="min-w-0">
+                            <p class="text-[0.65rem] text-stone-400 uppercase tracking-wide">Computer Name</p>
+                            <p class="text-sm text-stone-700 font-medium truncate mt-0.5" x-text="info(id).hostname || '—'">—</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[0.65rem] text-stone-400 uppercase tracking-wide">Operating System</p>
+                            <p class="flex items-center gap-1.5 text-sm text-stone-700 font-medium truncate mt-0.5">{{template "osicon" (dict "OS" .OS "Class" "w-3.5 h-3.5 shrink-0")}} {{osName .OS}}</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[0.65rem] text-stone-400 uppercase tracking-wide">LAN IP</p>
+                            <p class="text-sm text-stone-700 font-medium font-mono truncate mt-0.5">{{.Host}}:{{.Port}}</p>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[0.65rem] text-stone-400 uppercase tracking-wide">Status</p>
+                            <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full mt-1" :class="pillClass(info(id).status)">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="dotClass(info(id).status)"></span>
+                                <span x-text="ucfirst(info(id).status)">{{ucfirst .Status}}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <svg class="w-4 h-4 text-stone-400 shrink-0 transition-transform duration-200 ml-auto" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                <div x-show="open" x-cloak x-transition.opacity class="border-t border-stone-100">
+                    <div class="px-5 py-5 flex flex-col sm:flex-row sm:items-stretch border-b border-stone-100 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
+                        <div class="flex-1 py-2 sm:py-0 sm:px-4 first:sm:pl-0">
+                            <p class="text-xs text-stone-400 uppercase tracking-wide">Computer Name</p>
+                            <p class="text-lg text-stone-800 font-semibold truncate mt-1" x-text="info(id).hostname || '—'">—</p>
+                        </div>
+                        <div class="flex-1 py-2 sm:py-0 sm:px-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-wide">Operating System</p>
+                            <p class="flex items-center gap-2 text-lg text-stone-800 font-semibold mt-1">{{template "osicon" (dict "OS" .OS "Class" "w-5 h-5 shrink-0")}} {{osName .OS}}</p>
+                        </div>
+                        <div class="flex-1 py-2 sm:py-0 sm:px-4">
+                            <p class="text-xs text-stone-400 uppercase tracking-wide">LAN IP</p>
+                            <p class="text-lg text-stone-800 font-semibold font-mono truncate mt-1">{{.Host}}:{{.Port}}</p>
+                        </div>
+                        <div class="flex-1 py-2 sm:py-0 sm:px-4 last:sm:pr-0">
+                            <p class="text-xs text-stone-400 uppercase tracking-wide">Status</p>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium px-2.5 py-1 rounded-full mt-1.5" :class="pillClass(info(id).status)">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="dotClass(info(id).status)"></span>
+                                <span x-text="ucfirst(info(id).status)"></span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-5 border-b border-stone-100">
+                        <p class="text-xs text-stone-400 uppercase tracking-wide mb-3">Storage</p>
+                        <template x-if="info(id).status !== 'online'">
+                            <p class="text-sm text-stone-400 py-2" x-text="info(id).error || (info(id).status === 'checking' ? 'Checking…' : 'Drive information unavailable.')"></p>
+                        </template>
+                        <template x-if="info(id).status === 'online' && info(id).drives.length === 0">
+                            <p class="text-sm text-stone-400 py-2">No drives reported.</p>
+                        </template>
+                        <div class="space-y-3" x-show="info(id).status === 'online'">
+                            <template x-for="drive in info(id).drives" :key="drive.path">
+                                <div>
+                                    <div class="flex items-center justify-between text-sm mb-1">
+                                        <span class="font-medium text-stone-700" x-text="drive.label || drive.path"></span>
+                                        <span class="text-xs text-stone-400" x-text="humanSize(drive.free) + ' free of ' + humanSize(drive.total)"></span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                                        <div class="h-full rounded-full" :class="usedPct(drive) < 80 ? 'bg-tan-500' : 'bg-red-400'" :style="'width:' + Math.min(usedPct(drive), 100) + '%'"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-5 border-b border-stone-100">
+                        <p class="text-xs text-stone-400 uppercase tracking-wide mb-3">Current Speed</p>
+                        <div class="flex items-start gap-4">
+                            <template x-for="g in gauges(id)" :key="g.label">
+                                <div class="flex flex-1 flex-col items-center text-center">
+                                    <svg viewBox="0 0 100 58" class="w-full max-w-[11rem]">
+                                        <path d="M 8 50 A 42 42 0 0 1 92 50" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" class="text-stone-100" />
+                                        <path d="M 8 50 A 42 42 0 0 1 92 50" fill="none" stroke="{{$c}}" stroke-width="8" stroke-linecap="round"
+                                              stroke-dasharray="131.95" :stroke-dashoffset="131.95 - (g.pct / 100) * 131.95" class="transition-[stroke-dashoffset] duration-700 ease-out" />
+                                    </svg>
+                                    <p class="-mt-3 text-xs font-semibold uppercase tracking-wide text-stone-400" x-text="g.label"></p>
+                                    <p class="text-xl font-bold text-stone-800 tabular-nums mt-0.5" x-text="humanSize(g.value) + '/s'"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{if .Notes}}<p class="px-5 pt-4 text-sm text-stone-500">{{.Notes}}</p>{{end}}
+
+                    <div class="px-5 py-4 flex items-center gap-2">
+                        <button @click="ping(id)" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition" x-text="pinging[id] ? 'Checking…' : 'Ping'">Ping</button>
+                        <a href="/explorer?machine={{.ID}}" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">Browse</a>
+                        {{if eq .Role "full"}}
+                        <button @click="openEdit(id)" class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition">Edit</button>
+                        <form method="post" action="/machines/{{.ID}}/delete" class="ml-auto" onsubmit="return confirm('Remove {{.Name}}? This cannot be undone.')">
+                            <input type="hidden" name="_token" value="{{$.CSRF}}">
+                            <button class="text-xs font-medium px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-red-50 transition">Delete</button>
+                        </form>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Add / edit machine -->
+    <div x-show="form.open" x-cloak class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50" @keydown.escape.window="form.open = false">
+        <div class="fixed inset-0" @click="form.open = false"><div class="absolute inset-0 bg-stone-500 opacity-75"></div></div>
+        <div class="relative mb-6 bg-paper rounded-lg overflow-hidden shadow-xl sm:w-full sm:max-w-lg sm:mx-auto">
+            <form method="post" :action="form.id ? '/machines/' + form.id : '/machines'" class="p-6">
+                <input type="hidden" name="_token" value="{{.CSRF}}">
+                <h3 class="text-lg font-semibold text-stone-800 mb-4" x-text="form.id ? 'Edit machine' : 'Add a machine'"></h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label for="name" class="block font-medium text-sm text-stone-700">Name</label>
+                        <input id="name" name="name" x-model="form.name" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" placeholder="Desktop — Office">
+                        <p x-show="form.errors.name" class="text-sm text-red-600 mt-1" x-text="form.errors.name"></p>
+                    </div>
+                    <div>
+                        <label for="host" class="block font-medium text-sm text-stone-700">Host / IP</label>
+                        <input id="host" name="host" x-model="form.host" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" placeholder="192.168.1.42">
+                        <p x-show="form.errors.host" class="text-sm text-red-600 mt-1" x-text="form.errors.host"></p>
+                    </div>
+                    <div>
+                        <label for="port" class="block font-medium text-sm text-stone-700">Port</label>
+                        <input id="port" name="port" type="number" x-model="form.port" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full">
+                        <p x-show="form.errors.port" class="text-sm text-red-600 mt-1" x-text="form.errors.port"></p>
+                    </div>
+                    <div>
+                        <label for="os" class="block font-medium text-sm text-stone-700">Operating system</label>
+                        <select id="os" name="os" x-model="form.os" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400">
+                            <option value="windows">Windows</option><option value="linux">Linux</option><option value="macos">macOS</option><option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="color" class="block font-medium text-sm text-stone-700">Color tag</label>
+                        <input id="color" name="color" type="color" x-model="form.color" class="mt-1 block w-full h-10 border-stone-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <div class="flex items-center justify-between">
+                            <label for="agent_token" class="block font-medium text-sm text-stone-700" x-text="form.id ? 'Agent token (leave blank to keep current)' : 'Agent token'"></label>
+                            <button type="button" @click="form.token = randomToken()" class="text-xs text-tan-600 hover:text-tan-700">Generate</button>
+                        </div>
+                        <input id="agent_token" name="agent_token" x-model="form.token" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full font-mono text-sm" placeholder="Paste into the agent's config.json" autocomplete="off">
+                        <p x-show="form.errors.agent_token" class="text-sm text-red-600 mt-1" x-text="form.errors.agent_token"></p>
+                    </div>
+                    <div class="sm:col-span-2 flex items-center gap-2">
+                        <input id="use_tls" name="use_tls" type="checkbox" value="1" x-model="form.use_tls" class="rounded border-stone-300 text-tan-500 focus:ring-tan-400">
+                        <label for="use_tls" class="block font-medium text-sm text-stone-700">Use HTTPS to reach the agent</label>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="notes" class="block font-medium text-sm text-stone-700">Notes</label>
+                        <textarea id="notes" name="notes" x-model="form.notes" rows="2" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400"></textarea>
+                    </div>
+                    {{if $d.OtherUser}}
+                    <div class="sm:col-span-2">
+                        <span class="block font-medium text-sm text-stone-700">Shared with</span>
+                        <p class="text-xs text-stone-500 mt-0.5 mb-2">You always have full access. Grant other users read-only or full access to this machine.</p>
+                        <div class="space-y-2">
+                            {{range $d.OtherUser}}
+                            <div class="flex items-center justify-between gap-3 text-sm">
+                                <span class="text-stone-700">{{.Name}}</span>
+                                <select name="share_{{.ID}}" x-model="form.shares['{{.ID}}']" class="border-stone-300 rounded-md shadow-sm text-xs focus:border-tan-400 focus:ring-tan-400">
+                                    <option value="none">No access</option><option value="read_only">Read-only</option><option value="full">Full access</option>
+                                </select>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="form.open = false" class="px-4 py-2 text-sm font-medium text-stone-600 hover:text-stone-800">Cancel</button>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 transition" x-text="form.id ? 'Save changes' : 'Add machine'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}

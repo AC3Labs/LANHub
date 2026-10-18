@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{.CSRF}}">
+    <title>{{.Title}} · {{.AppName}}</title>
+    {{template "head" .}}
+</head>
+<body class="font-sans antialiased text-stone-800">
+    <div class="min-h-screen flex flex-col bg-stone-100">
+        {{template "nav" .}}
+        {{if .Flash}}
+            <div class="bg-tan-50 border-b border-tan-200 text-tan-800 text-sm">
+                <div class="max-w-7xl mx-auto py-2.5 px-4 sm:px-6 lg:px-8">{{.Flash}}</div>
+            </div>
+        {{end}}
+        <main class="flex-1">
+            {{template "content" .}}
+        </main>
+        {{template "transfers" .}}
+        {{template "footer" .}}
+    </div>
+</body>
+</html>

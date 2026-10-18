@@ -3,6 +3,41 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.10.0.0] - 2026-10-18
+
+### Changed
+- LANHub's hub is now a single Go program instead of the PHP (Laravel)
+  app. Same database, same passwords, same login codes and authenticator
+  apps, same agents: nothing to set up again. The image is 21 MB instead
+  of 883 MB and uses about 10 MB of memory instead of about 90.
+- Copies between machines stream straight from one agent to the other
+  through the hub instead of being saved to the hub's disk first, and every
+  file's size is checked on arrival. Measured: 1 GiB in 101 s instead of
+  194 s on the same 100 Mb/s hub.
+- Pages stay fast while big files are downloading (they used to wait for
+  one of six PHP workers).
+- "Search everywhere" searches all machines at the same time and no longer
+  lists files twice when one drive is inside another.
+- Activity opens instantly with a filter bar (machine, method, status) and
+  only loads when asked; routine background checks are hidden unless
+  wanted. Each row shows the file and the folder it was in, and who asked.
+
+### Added
+- LANHub Media, a separate container that lets the Explorer preview nearly
+  any video: files the browser can play are streamed as they are; others
+  are repackaged, or converted on the GPU when one is available, only as
+  much as needed and stopped as soon as the preview closes. A LANHub player
+  with seeking, volume and full screen.
+- Image previews fit the window. Audio files play in the preview.
+- `check-mail` command to test the mail settings without sending anything.
+
+### Fixed
+- Explorer breadcrumbs on Linux machines pointed at the wrong folders.
+- Previews are sandboxed, so an SVG or HTML file can't run scripts as the
+  hub even when opened directly.
+- Dropping onto a machine that's only showing its drive list no longer
+  aims at the top of the system drive; it asks for a folder instead.
+
 ## [0.9.3.0] - 2026-10-17
 
 ### Fixed

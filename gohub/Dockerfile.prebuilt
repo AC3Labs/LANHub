@@ -1,0 +1,9 @@
+# Same image as Dockerfile, from a binary built elsewhere (see build-image.sh),
+# so a small box doesn't need the Go toolchain image.
+FROM scratch
+COPY ca-certificates.crt /etc/ssl/certs/
+COPY lanhub-hub /lanhub-hub
+USER 65532:65532
+ENV LANHUB_DB=/data/database.sqlite LANHUB_ENV_FILE=/app/hub.env LANHUB_LISTEN=:8000
+EXPOSE 8000
+ENTRYPOINT ["/lanhub-hub"]

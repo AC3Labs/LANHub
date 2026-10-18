@@ -1,0 +1,47 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="bg-paper border-b border-stone-200">
+    <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <h2 class="font-semibold text-xl text-stone-800">Settings</h2>
+        <p class="text-sm text-stone-500 mt-1">Email for login codes and invitations, and the address links in emails point to.</p>
+    </div>
+</div>
+<div class="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
+        <h3 class="text-lg font-medium text-stone-800">Email (SMTP)</h3>
+        <form method="post" action="/settings" class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input type="hidden" name="_token" value="{{.CSRF}}"><input type="hidden" name="section" value="smtp">
+            <div><label class="block font-medium text-sm text-stone-700" for="h">Host</label><input id="h" name="smtp_host" value="{{$d.Host}}" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" placeholder="smtp.example.com"></div>
+            <div><label class="block font-medium text-sm text-stone-700" for="p">Port</label><input id="p" name="smtp_port" type="number" value="{{$d.Port}}" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full">{{template "fielderror" index $d.Errors "smtp_port"}}</div>
+            <div><label class="block font-medium text-sm text-stone-700" for="u">Username</label><input id="u" name="smtp_username" value="{{$d.Username}}" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" autocomplete="off"></div>
+            <div><label class="block font-medium text-sm text-stone-700" for="pw">Password</label><input id="pw" name="smtp_password" type="password" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full" autocomplete="new-password" placeholder="{{if $d.HasPassword}}Saved — leave blank to keep{{end}}"></div>
+            <div><label class="block font-medium text-sm text-stone-700" for="e">Encryption</label>
+                <select id="e" name="smtp_encryption" class="mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:border-tan-400 focus:ring-tan-400">
+                    <option value="tls" {{if eq $d.Encryption "tls"}}selected{{end}}>STARTTLS (usually port 587)</option>
+                    <option value="ssl" {{if eq $d.Encryption "ssl"}}selected{{end}}>SSL/TLS (usually port 465)</option>
+                    <option value="none" {{if eq $d.Encryption "none"}}selected{{end}}>None</option>
+                </select></div>
+            <div><label class="block font-medium text-sm text-stone-700" for="fa">From address</label><input id="fa" name="smtp_from_address" value="{{$d.FromAddress}}" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full">{{template "fielderror" index $d.Errors "smtp_from_address"}}</div>
+            <div class="sm:col-span-2"><label class="block font-medium text-sm text-stone-700" for="fn">From name</label><input id="fn" name="smtp_from_name" value="{{$d.FromName}}" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full"></div>
+            <div class="sm:col-span-2 flex gap-3"><button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Save</button></div>
+        </form>
+        <form method="post" action="/settings" class="mt-3">
+            <input type="hidden" name="_token" value="{{.CSRF}}"><input type="hidden" name="section" value="test">
+            <button class="inline-flex items-center px-4 py-2 bg-white border border-stone-300 rounded-md font-semibold text-xs text-black uppercase tracking-widest shadow-sm hover:bg-gray-100 transition">Send a test email to me</button>
+        </form>
+    </div>
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
+        <h3 class="text-lg font-medium text-stone-800">Hub address</h3>
+        <p class="text-sm text-stone-500 mt-1">The address invitation and password-reset links use.</p>
+        {{if $d.HubFromEnv}}
+            <p class="mt-3 text-sm text-stone-600">Set on the server (APP_URL): <span class="font-mono">{{$d.HubFromEnv}}</span></p>
+        {{else}}
+        <form method="post" action="/settings" class="mt-4 flex items-start gap-3">
+            <input type="hidden" name="_token" value="{{.CSRF}}"><input type="hidden" name="section" value="hub">
+            <div class="flex-1"><input name="hub_address" value="{{$d.HubAddress}}" placeholder="http://192.168.0.74:8000" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm block w-full font-mono text-sm">{{template "fielderror" index $d.Errors "hub_address"}}</div>
+            <button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Save</button>
+        </form>
+        {{end}}
+    </div>
+</div>
+{{end}}

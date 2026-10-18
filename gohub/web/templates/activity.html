@@ -1,0 +1,93 @@
+{{define "content"}}
+{{$d := .Data}}{{$f := $d.Filter}}
+<div>
+    <div class="bg-paper border-b border-stone-200">
+        <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h2 class="font-semibold text-xl text-stone-800">Activity</h2>
+            <p class="text-sm text-stone-500 mt-1">What's happened across every machine you can access, most recent first.</p>
+            <form method="get" action="/activity" class="mt-5 flex flex-wrap items-end gap-3">
+                <input type="hidden" name="show" value="1">
+                <label class="flex flex-col gap-1 text-xs font-medium text-stone-500">Machine
+                    <select name="machine" class="border-stone-300 rounded-md shadow-sm text-sm focus:border-tan-400 focus:ring-tan-400">
+                        <option value="">All machines</option>
+                        {{range $d.Machines}}<option value="{{.ID}}" {{if eq .ID $f.Machine}}selected{{end}}>{{.Name}}</option>{{end}}
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1 text-xs font-medium text-stone-500">Method
+                    <select name="method" class="border-stone-300 rounded-md shadow-sm text-sm focus:border-tan-400 focus:ring-tan-400">
+                        <option value="">All methods</option>
+                        <option value="GET" {{if eq $f.Method "GET"}}selected{{end}}>GET (reads)</option>
+                        <option value="POST" {{if eq $f.Method "POST"}}selected{{end}}>POST (changes)</option>
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1 text-xs font-medium text-stone-500">Status
+                    <select name="status" class="border-stone-300 rounded-md shadow-sm text-sm focus:border-tan-400 focus:ring-tan-400">
+                        <option value="">All statuses</option>
+                        <option value="2xx" {{if eq $f.Status "2xx"}}selected{{end}}>Succeeded (2xx)</option>
+                        <option value="3xx" {{if eq $f.Status "3xx"}}selected{{end}}>Redirected (3xx)</option>
+                        <option value="4xx" {{if eq $f.Status "4xx"}}selected{{end}}>Refused or not found (4xx)</option>
+                        <option value="5xx" {{if eq $f.Status "5xx"}}selected{{end}}>Failed (5xx)</option>
+                    </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm text-stone-600 pb-2">
+                    <input type="checkbox" name="background" value="1" {{if $f.Background}}checked{{end}} class="rounded border-stone-300 text-tan-500 focus:ring-tan-400">
+                    Include background checks
+                </label>
+                <div class="flex items-center gap-2 pb-0.5">
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">Show activity</button>
+                    <a href="/activity" class="inline-flex items-center px-4 py-2 bg-white hover:bg-gray-100 border border-stone-200 text-black text-sm font-medium rounded-lg shadow-soft transition">Clear filters</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="max-w-[1600px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {{if not $f.Show}}
+            <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
+                <p class="text-stone-500">Choose filters and press <span class="font-medium text-stone-700">Show activity</span>. With no filters, it shows everything on every machine.</p>
+            </div>
+        {{else}}
+            {{if $d.Failed}}<p class="mb-3 text-sm text-amber-700">Couldn't reach: {{range $i, $n := $d.Failed}}{{if $i}}, {{end}}{{$n}}{{end}}.</p>{{end}}
+            {{if not $d.Rows}}
+                <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
+                    <p class="text-stone-500">Nothing matches these filters.{{if not $f.Background}} Background checks are hidden; tick “Include background checks” to see them.{{end}}</p>
+                </div>
+            {{else}}
+            <p class="mb-3 text-xs text-stone-400">{{if gt $d.Total (len $d.Rows)}}Showing the newest {{len $d.Rows}} of {{$d.Total}} matching entries.{{else}}{{$d.Total}} matching entr{{if eq $d.Total 1}}y{{else}}ies{{end}}.{{end}}</p>
+            <div class="rounded-xl bg-paper shadow-soft border border-stone-200 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-stone-50 text-stone-400 text-xs uppercase tracking-wide">
+                        <tr>
+                            <th class="text-left font-medium px-4 py-2 w-32">When</th>
+                            <th class="text-left font-medium px-4 py-2 w-36">Machine</th>
+                            <th class="text-left font-medium px-4 py-2 w-16">Method</th>
+                            <th class="text-left font-medium px-4 py-2">Path</th>
+                            <th class="text-left font-medium px-4 py-2">File</th>
+                            <th class="text-left font-medium px-4 py-2 w-36">Requested by</th>
+                            <th class="text-right font-medium px-4 py-2 w-16">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range $d.Rows}}
+                        <tr class="border-b border-stone-50 align-top">
+                            <td class="px-4 py-2 text-stone-500 text-xs whitespace-nowrap" title="{{.Time}}">{{ago .When}}</td>
+                            <td class="px-4 py-2"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{color .Machine.Color}}"></span>{{.Machine.Name}}</span></td>
+                            <td class="px-4 py-2 font-mono text-xs text-stone-500">{{.Method}}</td>
+                            <td class="px-4 py-2 font-mono text-xs text-stone-500 max-w-[16rem] truncate" title="{{.Shown}}">{{.Shown}}</td>
+                            <td class="px-4 py-2 min-w-[12rem]">
+                                <p class="text-xs text-stone-400">{{.Action}}</p>
+                                {{if .File}}<p class="text-stone-800 font-medium break-all">{{.File}}</p>{{end}}
+                                {{if .Folder}}<p class="text-[11px] text-stone-400 font-mono break-all">from {{.Folder}}</p>{{end}}
+                            </td>
+                            <td class="px-4 py-2 text-xs text-stone-600">{{.By}}</td>
+                            <td class="px-4 py-2 text-right text-xs font-medium {{if lt .Status 300}}text-green-600{{else if lt .Status 500}}text-amber-600{{else}}text-red-600{{end}}">{{.Status}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
+        {{end}}
+    </div>
+</div>
+{{end}}

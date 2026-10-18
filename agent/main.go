@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const agentVersion = "1.1.0"
+const agentVersion = "1.2.0"
 
 var logFilePath string
 

@@ -1,0 +1,344 @@
+{{define "content"}}
+<div x-data="explorer({{json .Data.Machines}}, {{.Data.First}})">
+    <!-- Preview -->
+    <div x-show="previewUrl" x-cloak class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6" x-on:click.self="closePreview()">
+        <div class="bg-paper rounded-xl shadow-panel w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2.5 border-b border-stone-100">
+                <span class="text-sm font-medium text-stone-700 truncate" x-text="previewName"></span>
+                <button x-on:click="closePreview()" class="p-1 rounded hover:bg-stone-100 text-stone-400 hover:text-stone-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <template x-if="previewKind === 'image'">
+                <div class="flex-1 min-h-0 flex items-center justify-center bg-stone-50 p-4">
+                    <img :src="previewUrl" :alt="previewName" class="max-w-full max-h-full object-contain rounded shadow-soft">
+                </div>
+            </template>
+            <template x-if="previewKind === 'video' && previewVideo">
+                <div x-data="lanhubPlayer(previewVideo.machineId, previewVideo.path)" class="relative flex-1 min-h-0 flex flex-col bg-black text-white select-none">
+                    <div class="relative flex-1 min-h-0 flex items-center justify-center" @click="toggle()">
+                        <video x-ref="video" data-preview-media playsinline class="max-w-full max-h-full"
+                               @timeupdate="onTime()" @play="playing = true" @pause="playing = false" @playing="loading = false; waiting = false"
+                               @waiting="waiting = true" @canplay="loading = false" @error="onError()" @loadedmetadata="onTime()"></video>
+                        <div x-show="(loading || waiting) && !error" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div class="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm">
+                                <svg class="w-4 h-4 animate-spin text-tan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <span x-text="plan && plan.mode === 'transcode' ? 'Converting…' : 'Loading…'"></span>
+                            </div>
+                        </div>
+                        <p x-show="error" class="absolute inset-0 flex items-center justify-center p-8 text-center text-sm text-stone-300" x-text="error"></p>
+                    </div>
+                    <div x-show="!error" class="px-4 pt-2 pb-3 bg-gradient-to-t from-black to-black/80">
+                        <input type="range" min="0" :max="Math.max(duration, 1)" step="0.1" :value="position"
+                               @input="dragging = true; position = $event.target.value" @change="seek($event.target.value)"
+                               class="w-full h-1.5 accent-tan-500 cursor-pointer" aria-label="Seek">
+                        <div class="mt-2 flex items-center gap-3 text-xs">
+                            <button type="button" @click="toggle()" class="p-1 rounded hover:bg-white/10" :aria-label="playing ? 'Pause' : 'Play'">
+                                <svg x-show="!playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.27l9.34-5.89a1.5 1.5 0 000-2.54L6.3 2.84z"/></svg>
+                                <svg x-show="playing" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .41.34.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zm7 0a.75.75 0 00-.75.75v12.5c0 .41.34.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z"/></svg>
+                            </button>
+                            <span class="tabular-nums text-stone-200" x-text="fmtTime(position) + ' / ' + fmtTime(duration)"></span>
+                            <span class="hidden sm:inline text-stone-400 truncate" x-text="label"></span>
+                            <span class="ml-auto flex items-center gap-2">
+                                <button type="button" @click="toggleMute()" class="p-1 rounded hover:bg-white/10" aria-label="Mute">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5L6 9H2v6h4l5 4V5z"/><path x-show="!muted" stroke-linecap="round" stroke-width="2" d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/><path x-show="muted" stroke-linecap="round" stroke-width="2" d="M17 9l4 6m0-6l-4 6"/></svg>
+                                </button>
+                                <input type="range" min="0" max="1" step="0.05" :value="muted ? 0 : volume" @input="setVolume($event.target.value)" class="w-20 h-1 accent-tan-500" aria-label="Volume">
+                                <button type="button" @click="fullscreen()" class="p-1 rounded hover:bg-white/10" aria-label="Full screen">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg>
+                                </button>
+                                <span class="text-[10px] font-semibold uppercase tracking-wider text-tan-400">LANHub</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <template x-if="previewKind === 'audio'">
+                <div class="flex-1 min-h-0 flex items-center justify-center bg-stone-50 p-6">
+                    <audio data-preview-media :src="previewUrl" controls autoplay class="w-full max-w-lg"></audio>
+                </div>
+            </template>
+            <template x-if="previewKind === 'frame'">
+                <iframe :src="previewUrl" class="flex-1 w-full bg-white" sandbox=""></iframe>
+            </template>
+        </div>
+    </div>
+
+    <div class="bg-paper border-b border-stone-200">
+        <div class="max-w-[1900px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-semibold text-xl text-stone-800">Explorer</h2>
+                <p class="text-sm text-stone-500 mt-1">Browse, move, and manage files across every machine you've registered.</p>
+            </div>
+            <template x-if="machines.length > 0">
+                <form x-on:submit.prevent="runGlobalSearch()" class="flex items-center gap-1.5 px-3 py-2 bg-white border border-stone-200 rounded-lg w-full sm:w-[26rem]">
+                    <svg x-show="!global.searching" class="w-3.5 h-3.5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <svg x-show="global.searching" x-cloak class="w-3.5 h-3.5 text-tan-500 shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <input type="text" x-model="global.query" :disabled="global.searching" placeholder="Search for a file on any machine connected to LANHub"
+                           class="flex-1 text-sm border-0 focus:ring-0 p-0 bg-transparent placeholder:text-stone-400 disabled:text-stone-400">
+                    <span x-show="global.searching" x-cloak class="text-xs text-tan-600 shrink-0 truncate max-w-[9rem]" x-text="'Searching ' + global.pending.join(', ') + '…'"></span>
+                    <button type="button" x-show="global.searched && !global.searching" x-cloak @click="clearGlobal()" class="text-xs text-stone-400 hover:text-stone-600 shrink-0">Clear</button>
+                </form>
+            </template>
+            <template x-if="machines.length > 0">
+                <div x-data="{ open: false }" class="relative">
+                    <button @click="open = !open" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Open Machine
+                    </button>
+                    <div x-show="open" x-cloak @click.outside="open = false" class="absolute right-0 mt-2 w-56 bg-paper rounded-lg shadow-panel ring-1 ring-stone-200 py-1 z-20">
+                        <template x-for="m in machines" :key="m.id">
+                            <button @click="addPane(m.id); open = false" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="'background-color:' + m.color"></span>
+                                <span x-text="m.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Search everywhere results -->
+        <div x-show="global.searched" x-cloak class="max-w-[1900px] mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+            <div class="bg-paper rounded-xl shadow-soft border border-stone-200 overflow-hidden">
+                <p x-show="global.partial && !global.searching" class="px-4 pt-3 text-xs text-stone-400">Showing partial results — the search hit its limit on at least one machine.</p>
+                <div x-show="global.results.length === 0 && !global.searching" class="p-8 text-center text-sm text-stone-400">No matches found on any machine.</div>
+                <div x-show="global.results.length === 0 && global.searching" class="p-8 text-center text-sm text-stone-400">Searching…</div>
+                <table x-show="global.results.length > 0" class="w-full text-sm">
+                    <tbody>
+                        <template x-for="(r, i) in global.results" :key="r.machine_id + ':' + r.path">
+                            <tr class="border-b border-stone-50 hover:bg-stone-50/80">
+                                <td class="px-4 py-2.5">
+                                    <button @click="openGlobalResult(r)" class="flex items-center gap-3 min-w-0 text-left w-full">
+                                        <span x-html="fileIcon(r.type, r.name)"></span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-stone-700" x-text="r.name"></span>
+                                            <span class="block truncate text-[10px] text-stone-400" x-text="r.path"></span>
+                                        </span>
+                                        <span class="flex items-center gap-1.5 shrink-0 text-xs text-stone-500">
+                                            <span class="w-2 h-2 rounded-full" :style="'background-color:' + r.color"></span>
+                                            <span x-text="r.machine"></span>
+                                        </span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <div x-show="global.failures.length > 0" class="px-4 py-3 border-t border-stone-100 bg-stone-50/60">
+                    <p class="text-xs font-medium text-stone-500 mb-1.5">Couldn't be searched:</p>
+                    <ul class="space-y-1">
+                        <template x-for="f in global.failures" :key="f.machine">
+                            <li class="flex items-center gap-1.5 text-xs text-stone-500">
+                                <span class="w-2 h-2 rounded-full shrink-0" :style="'background-color:' + f.color"></span>
+                                <span class="font-medium" x-text="f.machine"></span> — <span x-text="f.reason"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-[1900px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div x-show="panes.length === 0" class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
+            <p class="text-stone-500" x-show="machines.length === 0">No machines registered yet. <a href="/dashboard" class="text-tan-600 underline">Add one</a> to start browsing.</p>
+            <p class="text-stone-500" x-show="machines.length > 0">Open a machine to start browsing its files.</p>
+        </div>
+
+        <div x-show="panes.length > 0" class="flex gap-4 overflow-x-auto pb-4" style="scrollbar-gutter: stable;">
+            <template x-for="pane in panes" :key="pane.id">
+                <div class="flex flex-col w-[420px] shrink-0 bg-paper rounded-xl shadow-soft border border-stone-200 overflow-hidden">
+                    <!-- Pane header -->
+                    <div class="flex items-center justify-between px-4 py-3 border-b border-stone-100" :style="'background: linear-gradient(to right, ' + machine(pane).color + '14, transparent)'">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="'background-color:' + machine(pane).color"></span>
+                            <span class="font-medium text-stone-800 truncate" x-text="machine(pane).name"></span>
+                            <span class="text-xs text-stone-400 capitalize shrink-0" x-text="machine(pane).os"></span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button @click="pane.view = pane.view === 'list' ? 'grid' : 'list'" title="Toggle view" class="p-1.5 rounded hover:bg-stone-100 text-stone-500">
+                                <svg x-show="pane.view === 'list'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                                <svg x-show="pane.view !== 'list'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h4v4H4V6zm6 0h4v4h-4V6zm6 0h4v4h-4V6zM4 14h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+                            </button>
+                            <button @click="pane.showHidden = !pane.showHidden" title="Toggle hidden files" class="p-1.5 rounded hover:bg-stone-100" :class="pane.showHidden ? 'text-tan-600' : 'text-stone-500'">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </button>
+                            <button @click="load(pane)" title="Refresh" class="p-1.5 rounded hover:bg-stone-100 text-stone-500">
+                                <svg class="w-4 h-4" :class="pane.loading && 'animate-spin'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            </button>
+                            <button @click="closePane(pane)" title="Close" class="p-1.5 rounded hover:bg-red-50 text-stone-400 hover:text-red-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Breadcrumb -->
+                    <div class="flex items-center gap-1 px-3 py-2 border-b border-stone-100 text-xs overflow-x-auto whitespace-nowrap">
+                        <button @click="up(pane)" class="p-1 rounded hover:bg-stone-100 text-stone-500 shrink-0" title="Up">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>
+                        </button>
+                        <button @click="navigate(pane, null)" class="px-2 py-0.5 rounded hover:bg-stone-100 text-stone-500 shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        </button>
+                        <template x-for="c in crumbs(pane)" :key="c.path">
+                            <span class="flex items-center gap-1">
+                                <span class="text-stone-300">/</span>
+                                <button @click="navigate(pane, c.path)" class="px-2 py-0.5 rounded hover:bg-stone-100 text-stone-600 shrink-0" x-text="c.label"></button>
+                            </span>
+                        </template>
+                    </div>
+
+                    <!-- Toolbar: buttons on one line; status and errors on their own line below, wrapped in full -->
+                    <div class="px-3 py-2 border-b border-stone-100">
+                        <div class="flex items-center gap-2">
+                            <template x-if="machine(pane).canWrite">
+                                <span class="flex items-center gap-2 shrink-0">
+                                    <button @click="mkdir(pane)" :disabled="pane.path === null" class="whitespace-nowrap text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition">+ Folder</button>
+                                    <label class="whitespace-nowrap text-xs font-medium px-2.5 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100 transition cursor-pointer" :class="pane.path === null && 'opacity-40 pointer-events-none'">
+                                        Upload
+                                        <input type="file" multiple class="hidden" @change="upload(pane, $event.target.files); $event.target.value = ''">
+                                    </label>
+                                </span>
+                            </template>
+                            <span x-show="!machine(pane).canWrite" class="text-xs text-stone-400 italic">Read-only</span>
+                        </div>
+                        <p x-show="pane.uploading !== null" x-cloak class="mt-1.5 text-xs text-tan-600" x-text="'Uploading ' + pane.uploading + '%'"></p>
+                        <div x-show="pane.error" x-cloak class="mt-1.5 flex items-start gap-2 text-xs text-red-500">
+                            <p class="flex-1 break-words" x-text="pane.error"></p>
+                            <button type="button" @click="pane.error = null" class="shrink-0 text-stone-400 hover:text-stone-600" aria-label="Dismiss">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <form @submit.prevent="searchPane(pane)" class="flex items-center gap-1.5 px-3 py-2 border-b border-stone-100">
+                        <svg class="w-3.5 h-3.5 shrink-0" :class="pane.search.loading ? 'text-tan-500 animate-spin' : 'text-stone-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" x-model="pane.search.query" placeholder="Search this folder…" class="flex-1 text-xs border-0 focus:ring-0 px-2 py-1 rounded bg-transparent placeholder:text-stone-400">
+                        <button type="button" x-show="pane.search.results !== null" @click="clearSearch(pane)" class="text-xs text-stone-400 hover:text-stone-600">Clear</button>
+                    </form>
+
+                    <!-- Listing -->
+                    <div class="flex-1 overflow-y-auto min-h-[320px] max-h-[520px]"
+                         x-on:dragover.prevent="dropTarget = pane.id + '::__self'"
+                         x-on:dragleave="dropTarget === pane.id + '::__self' && (dropTarget = null)"
+                         x-on:drop.prevent="handleDrop($event, pane, pane.path)"
+                         :style="dropTarget === pane.id + '::__self' ? 'background-color:' + machine(pane).color + '14' : ''">
+
+                        <template x-if="pane.search.results !== null">
+                            <div>
+                                <div x-show="pane.search.results.length === 0" class="p-8 text-center text-sm text-stone-400">No matches found.</div>
+                                <table class="w-full text-sm"><tbody>
+                                    <template x-for="r in pane.search.results" :key="r.path">
+                                        <tr class="border-b border-stone-50 hover:bg-stone-50/80">
+                                            <td class="px-3 py-2">
+                                                <button @click="openSearchResult(pane, r)" class="flex items-center gap-2 min-w-0 text-left w-full">
+                                                    <span x-html="fileIcon(r.type, r.name)"></span>
+                                                    <span class="min-w-0">
+                                                        <span class="block truncate text-stone-700" x-text="r.name"></span>
+                                                        <span class="block truncate text-[10px] text-stone-400" x-text="r.path"></span>
+                                                    </span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody></table>
+                            </div>
+                        </template>
+
+                        <template x-if="pane.search.results === null && visible(pane).length === 0">
+                            <div class="p-8 text-center text-sm text-stone-400" x-text="pane.loading ? 'Loading…' : (pane.error ? 'Could not load this folder.' : 'This folder is empty.')"></div>
+                        </template>
+
+                        <template x-if="pane.search.results === null && visible(pane).length > 0 && pane.view === 'list'">
+                            <table class="w-full text-sm">
+                                <thead class="sticky top-0 bg-stone-50 text-stone-400 text-xs uppercase tracking-wide">
+                                    <tr>
+                                        <th class="text-left font-medium px-3 py-2 cursor-pointer" @click="sortBy(pane, 'name')">Name</th>
+                                        <th class="text-right font-medium px-3 py-2 cursor-pointer w-20" @click="sortBy(pane, 'size')">Size</th>
+                                        <th class="text-right font-medium px-3 py-2 w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="entry in visible(pane)" :key="entry.path">
+                                        <tr x-data="{ menu: false, menuX: 0, menuY: 0 }"
+                                            :draggable="entry.type !== 'drive'"
+                                            @dragstart="startDrag($event, pane, entry)" @dragend="endDrag()"
+                                            @dragover.prevent.stop="(entry.type === 'dir' || entry.type === 'drive') ? dropTarget = entry.path : dropTarget = pane.id + '::__self'"
+                                            @drop.prevent.stop="handleDrop($event, pane, (entry.type === 'dir' || entry.type === 'drive') ? entry.path : pane.path)"
+                                            @contextmenu.prevent="menu = true; menuX = Math.min($event.clientX, window.innerWidth - 170); menuY = Math.min($event.clientY, window.innerHeight - 150)"
+                                            :style="dropTarget === entry.path ? 'background-color:' + machine(pane).color + '1f' : ''"
+                                            class="relative border-b border-stone-50 hover:bg-stone-50/80 group">
+                                            <td class="px-3 py-2">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <span x-html="fileIcon(entry.type, entry.name)"></span>
+                                                    <template x-if="isRenaming(pane, entry)">
+                                                        <span class="flex items-center gap-1 w-full">
+                                                            <input type="text" x-model="renaming.value" @keydown.enter="confirmRename()" @keydown.escape="renaming = null"
+                                                                   x-init="$nextTick(() => $el.select())" class="text-sm border-tan-400 rounded px-1 py-0.5 w-full focus:ring-tan-400">
+                                                            <button @click="confirmRename()" class="text-tan-600 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>
+                                                        </span>
+                                                    </template>
+                                                    <template x-if="!isRenaming(pane, entry) && (entry.type === 'dir' || entry.type === 'drive')">
+                                                        <button @click="navigate(pane, entry.path)" class="truncate text-stone-700 hover:text-tan-700 text-left" x-text="entry.name"></button>
+                                                    </template>
+                                                    <template x-if="!isRenaming(pane, entry) && entry.type === 'file'">
+                                                        <span class="truncate text-stone-700" x-text="entry.name"></span>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                            <td class="px-3 py-2 text-right text-stone-400 text-xs whitespace-nowrap" x-text="entry.size !== null && entry.size !== undefined ? humanSize(entry.size) : '—'"></td>
+                                            <td class="px-3 py-2 text-right relative">
+                                                <button @click="menu = !menu; menuX = Math.min($event.clientX, window.innerWidth - 170); menuY = Math.min($event.clientY, window.innerHeight - 150)" class="p-1 rounded hover:bg-stone-200 text-stone-400 opacity-0 group-hover:opacity-100 transition">
+                                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4zm0 6a2 2 0 110-4 2 2 0 010 4z"/></svg>
+                                                </button>
+                                                <div x-show="menu" x-cloak @click.outside="menu = false" :style="'top: ' + menuY + 'px; left: ' + menuX + 'px;'" class="fixed w-40 bg-paper rounded-lg shadow-panel ring-1 ring-stone-200 py-1 z-40 text-left">
+                                                    <template x-if="entry.type === 'file'">
+                                                        <div>
+                                                            <button @click="openPreview(pane, entry); menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Preview</button>
+                                                            <a :href="downloadUrl(pane, entry)" download @click="menu = false" class="block w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Download</a>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="entry.type !== 'drive' && machine(pane).canWrite">
+                                                        <div>
+                                                            <button @click="startRename(pane, entry); menu = false" class="w-full text-left px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-50">Rename</button>
+                                                            <button @click="menu = false; remove(pane, entry)" class="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </template>
+
+                        <template x-if="pane.search.results === null && visible(pane).length > 0 && pane.view === 'grid'">
+                            <div class="grid grid-cols-3 gap-3 p-3">
+                                <template x-for="entry in visible(pane)" :key="entry.path">
+                                    <div :draggable="entry.type !== 'drive'"
+                                         @dragstart="startDrag($event, pane, entry)" @dragend="endDrag()"
+                                         @dragover.prevent.stop="(entry.type === 'dir' || entry.type === 'drive') && (dropTarget = entry.path)"
+                                         @drop.prevent.stop="handleDrop($event, pane, (entry.type === 'dir' || entry.type === 'drive') ? entry.path : pane.path)"
+                                         @click="(entry.type === 'dir' || entry.type === 'drive') && navigate(pane, entry.path)"
+                                         :style="dropTarget === entry.path ? 'background-color:' + machine(pane).color + '1f; box-shadow: inset 0 0 0 1px ' + machine(pane).color : ''"
+                                         class="flex flex-col items-center gap-1.5 p-3 rounded-lg hover:bg-stone-50 cursor-pointer text-center">
+                                        <template x-if="entry.type === 'file' && isPreviewableImage(entry.name)">
+                                            <img :src="thumbUrl(pane, entry)" alt="" loading="lazy" class="w-12 h-12 object-cover rounded-md border border-stone-200 bg-stone-50">
+                                        </template>
+                                        <template x-if="!(entry.type === 'file' && isPreviewableImage(entry.name))">
+                                            <span x-html="fileIcon(entry.type, entry.name, true)"></span>
+                                        </template>
+                                        <span class="text-xs text-stone-600 truncate w-full" x-text="entry.name"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+{{end}}

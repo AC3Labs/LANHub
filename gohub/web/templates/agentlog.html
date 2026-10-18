@@ -1,0 +1,61 @@
+{{define "content"}}
+{{$d := .Data}}
+<div>
+    <div class="bg-paper border-b border-stone-200">
+        <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <a href="/agents" class="text-xs text-stone-400 hover:text-stone-600">&larr; Agents</a>
+            <div class="flex items-center gap-3 mt-1">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: {{color $d.Machine.Color}}"></span>
+                <h2 class="font-semibold text-xl text-stone-800">{{$d.Machine.Name}} — Transfer Log</h2>
+            </div>
+            <p class="text-sm text-stone-500 mt-1">Every cross-machine transfer sent from or received by this machine, most recent first.</p>
+        </div>
+    </div>
+    <div class="max-w-[1600px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {{if not $d.Rows}}
+            <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center"><p class="text-stone-500">No transfers involving this machine yet.</p></div>
+        {{else}}
+        <div class="rounded-xl bg-paper shadow-soft border border-stone-200 overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-stone-50 text-stone-400 text-xs uppercase tracking-wide">
+                    <tr>
+                        <th class="text-left font-medium px-4 py-2">File</th>
+                        <th class="text-left font-medium px-4 py-2 w-24">Direction</th>
+                        <th class="text-left font-medium px-4 py-2 w-40">Machine</th>
+                        <th class="text-left font-medium px-4 py-2 w-20">Size</th>
+                        <th class="text-left font-medium px-4 py-2 w-40">When</th>
+                        <th class="text-right font-medium px-4 py-2 w-24">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $d.Rows}}
+                    <tr class="border-b border-stone-50">
+                        <td class="px-4 py-2 font-mono text-xs text-stone-700 truncate max-w-0">{{.File}}</td>
+                        <td class="px-4 py-2">
+                            <span class="inline-flex items-center gap-1 text-xs font-medium {{if .Sent}}text-blue-600{{else}}text-emerald-600{{end}}">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">{{if .Sent}}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"/>{{else}}<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m0 0l-6-6m6 6l6-6"/>{{end}}</svg>
+                                {{if .Sent}}Sent{{else}}Received{{end}}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2"><span class="inline-flex items-center gap-1.5 text-xs text-stone-600"><span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{color .OtherCol}}"></span>{{if .Sent}}to{{else}}from{{end}} {{.Other}}</span></td>
+                        <td class="px-4 py-2 text-xs text-stone-500">{{if .Bytes}}{{humanSize .Bytes}}{{else}}—{{end}}</td>
+                        <td class="px-4 py-2 text-stone-500 text-xs whitespace-nowrap">{{ago .Created}}</td>
+                        <td class="px-4 py-2 text-right text-xs font-medium capitalize {{if eq .Status "done"}}text-green-600{{else if eq .Status "error"}}text-red-600{{else}}text-amber-600{{end}}">{{.Status}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{if gt $d.Pages 1}}
+        <div class="mt-4 flex items-center justify-between text-sm text-stone-500">
+            <span>Page {{$d.Page}} of {{$d.Pages}} · {{$d.Total}} transfers</span>
+            <span class="flex gap-2">
+                {{if gt $d.Page 1}}<a href="?page={{$d.Prev}}" class="px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100">&larr; Newer</a>{{end}}
+                {{if lt $d.Page $d.Pages}}<a href="?page={{$d.Next}}" class="px-3 py-1.5 rounded-md border border-stone-200 bg-white text-black hover:bg-gray-100">Older &rarr;</a>{{end}}
+            </span>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+</div>
+{{end}}

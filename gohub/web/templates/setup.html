@@ -1,0 +1,12 @@
+{{define "content"}}
+{{$d := .Data}}
+<p class="text-sm text-stone-500 mb-4">Welcome to LANHub. Create the first admin account to get started.</p>
+<form method="post" action="/setup" class="space-y-4">
+    <input type="hidden" name="_token" value="{{.CSRF}}">
+    <div><label class="block font-medium text-sm text-stone-700" for="name">Name</label><input id="name" name="name" value="{{$d.Name}}" required autofocus class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm block mt-1 w-full">{{template "fielderror" index $d.Errors "name"}}</div>
+    <div><label class="block font-medium text-sm text-stone-700" for="email">Email</label><input id="email" name="email" type="email" value="{{$d.Email}}" required class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm block mt-1 w-full">{{template "fielderror" index $d.Errors "email"}}</div>
+    <div><label class="block font-medium text-sm text-stone-700" for="password">Password</label><input id="password" name="password" type="password" required autocomplete="new-password" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm block mt-1 w-full">{{template "fielderror" index $d.Errors "password"}}</div>
+    <div><label class="block font-medium text-sm text-stone-700" for="pc">Confirm password</label><input id="pc" name="password_confirmation" type="password" required autocomplete="new-password" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm block mt-1 w-full"></div>
+    <div class="flex justify-end"><button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Create admin account</button></div>
+</form>
+{{end}}

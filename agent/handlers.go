@@ -43,10 +43,12 @@ func queryParam(r *http.Request, name string) string {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	hostname, _ := os.Hostname()
-	writeJSON(w, 200, map[string]string{
+	writeJSON(w, 200, map[string]any{
 		"hostname": hostname,
 		"os":       runtime.GOOS,
 		"version":  agentVersion,
+		// What this agent can do beyond the 1.1.0 API, so a hub can check.
+		"features": []string{"range"},
 	})
 }
 
@@ -127,31 +129,40 @@ func throttleDelay(cfg *Config) time.Duration {
 	return time.Duration(seconds * float64(time.Second))
 }
 
-func streamThrottled(w io.Writer, path string, delay time.Duration) error {
-	f, err := os.Open(path)
+// throttledFile slows reads down to throttle_kbps while still supporting
+// Seek, so http.ServeContent can answer Range requests.
+type throttledFile struct {
+	*os.File
+	delay time.Duration
+}
+
+func (t throttledFile) Read(p []byte) (int, error) {
+	if len(p) > chunkSize {
+		p = p[:chunkSize]
+	}
+	n, err := t.File.Read(p)
+	if n > 0 && t.delay > 0 {
+		time.Sleep(time.Duration(float64(t.delay) * float64(n) / float64(chunkSize)))
+	}
+	return n, err
+}
+
+// serveFile sends a file with Range support (206 partial content), so a
+// video can be seeked and a reader can fetch just the part it needs. The
+// caller sets Content-Type and Content-Disposition first.
+func serveFile(w http.ResponseWriter, r *http.Request, filePath string, delay time.Duration) {
+	f, err := os.Open(filePath)
 	if err != nil {
-		return err
+		writeError(w, 403, "Permission denied reading "+filePath+".")
+		return
 	}
 	defer f.Close()
-
-	buf := make([]byte, chunkSize)
-	for {
-		n, readErr := f.Read(buf)
-		if n > 0 {
-			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
-				return writeErr
-			}
-			if delay > 0 {
-				time.Sleep(delay)
-			}
-		}
-		if readErr == io.EOF {
-			return nil
-		}
-		if readErr != nil {
-			return readErr
-		}
+	info, err := f.Stat()
+	if err != nil {
+		writeError(w, 403, "Permission denied reading "+filePath+".")
+		return
 	}
+	http.ServeContent(w, r, "", info.ModTime(), throttledFile{File: f, delay: delay})
 }
 
 // --- /api/download ---
@@ -172,10 +183,9 @@ func handleDownload(cfg *Config) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Disposition", `attachment; filename="`+filepath.Base(filePath)+`"`)
-		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 		w.Header().Set("Content-Type", "application/octet-stream")
 
-		streamThrottled(w, filePath, throttleDelay(cfg))
+		serveFile(w, r, filePath, throttleDelay(cfg))
 	}
 }
 
@@ -213,14 +223,14 @@ func handlePreview(cfg *Config) http.HandlerFunc {
 		if previewImageTypes[guessed] {
 			w.Header().Set("Content-Disposition", `inline; filename="`+filepath.Base(filePath)+`"`)
 			w.Header().Set("Content-Type", guessed)
-			streamThrottled(w, filePath, throttleDelay(cfg))
+			serveFile(w, r, filePath, throttleDelay(cfg))
 			return
 		}
 
 		if guessed == "application/pdf" {
 			w.Header().Set("Content-Disposition", `inline; filename="`+filepath.Base(filePath)+`"`)
 			w.Header().Set("Content-Type", "application/pdf")
-			streamThrottled(w, filePath, throttleDelay(cfg))
+			serveFile(w, r, filePath, throttleDelay(cfg))
 			return
 		}
 
