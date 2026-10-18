@@ -3,6 +3,13 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.10.0.1] - 2026-10-18
+
+### Changed
+- Dashboard: machine rows line up in fixed columns, whatever the machine
+  name's length, with the most room given to the computer name. Long names
+  show in full on hover.
+
 ## [0.10.0.0] - 2026-10-18
 
 ### Changed
