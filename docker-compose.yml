@@ -1,12 +1,13 @@
 services:
   hub:
-    # Prebuilt and published by .github/workflows/publish-image.yml on
-    # every push to main. This file works standalone on any
+    # The Go hub is on the go-hub branch, which has no published image yet,
+    # so Docker builds it straight from GitHub on first start (a few
+    # minutes, once). This file still works standalone on any
     # docker-compose-driven platform (Dokploy, Portainer, Coolify, plain
     # `docker compose up`), with no repo checkout and no .env file. Working
-    # from a full clone and want to build your own? Swap this line for
-    # `build: ./gohub`.
-    image: ghcr.io/ac3labs/lanhub:latest
+    # from a full clone? Use `build: ./gohub` instead.
+    build: https://github.com/AC3Labs/LANHub.git#go-hub:gohub
+    image: lanhub-go:local
     restart: unless-stopped
     read_only: true
 
@@ -50,7 +51,10 @@ services:
   # converting it on the fly. Optional: delete this service (and MEDIA_URL
   # above) and previews still play what the browser handles itself.
   media:
-    image: ghcr.io/ac3labs/lanhub-media:latest
+    build:
+      context: https://github.com/AC3Labs/LANHub.git#go-hub:gohub
+      dockerfile: Dockerfile.media
+    image: lanhub-media:local
     restart: unless-stopped
     read_only: true
     depends_on: [hub]

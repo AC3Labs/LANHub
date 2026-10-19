@@ -58,13 +58,15 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 ### 1. Run the hub
 
 You only need one file, `docker-compose.yml`, and you don't have to edit it.
-It pulls a prebuilt image, so you don't need to clone this repo, create a
-`.env` file, or generate any keys.
+You don't need to clone this repo, create a `.env` file, or generate any
+keys. (On this `go-hub` branch there's no published image yet, so the first
+start builds the hub and LANHub Media from GitHub. It takes a few minutes,
+once.)
 
 **Plain Docker** (any Linux server, x86-64):
 
 ```
-curl -O https://raw.githubusercontent.com/ac3labs/lanhub/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/AC3Labs/LANHub/go-hub/docker-compose.yml
 docker compose up -d
 ```
 
@@ -101,8 +103,9 @@ EMAIL -password PASSWORD`.)
   already using port 8949. In `docker-compose.yml`, change the left-hand
   number under `ports:`, e.g. `"8950:8000"`. Deploy again and browse to
   that port instead.
-- *"no matching manifest"* means your server isn't x86-64 (for example a
-  Raspberry Pi or other ARM device). Only x86-64 is published right now.
+- A build error mentioning `intel-media-driver` means your server isn't
+  x86-64 (for example a Raspberry Pi or other ARM device). Only x86-64 is
+  supported right now.
 - Anything else: run `docker compose logs hub`. The hub explains what's
   wrong in plain language, either in that log or on the page itself.
 

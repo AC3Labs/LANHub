@@ -1,11 +1,17 @@
-# LANHub Media: ffmpeg with Alpine's broad codec support (reads nearly every
-# video format) plus Intel VAAPI drivers for GPU encoding, and the small
-# lanhub-media service. Build context: dist-media/ (see build-media.sh).
+# LANHub Media from source: build the Go binary, then ship it with ffmpeg.
+# (Dockerfile.media.prebuilt does the same from a binary built elsewhere.)
+FROM golang:1.27.1 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /lanhub-media ./cmd/lanhub-media
+
 FROM alpine:3.22
 RUN apk add --no-cache ffmpeg libva-intel-driver intel-media-driver ca-certificates \
     && adduser -D -H -u 65532 lanhub \
     && mkdir /media-key && chown 65532:65532 /media-key
-COPY lanhub-media /usr/local/bin/lanhub-media
+COPY --from=build /lanhub-media /usr/local/bin/lanhub-media
 USER 65532
 ENV MEDIA_LISTEN=:8960
 EXPOSE 8960

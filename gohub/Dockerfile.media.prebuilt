@@ -1,0 +1,12 @@
+# LANHub Media: ffmpeg with Alpine's broad codec support (reads nearly every
+# video format) plus Intel VAAPI drivers for GPU encoding, and the small
+# lanhub-media service. Build context: dist-media/ (see build-media.sh).
+FROM alpine:3.22
+RUN apk add --no-cache ffmpeg libva-intel-driver intel-media-driver ca-certificates \
+    && adduser -D -H -u 65532 lanhub \
+    && mkdir /media-key && chown 65532:65532 /media-key
+COPY lanhub-media /usr/local/bin/lanhub-media
+USER 65532
+ENV MEDIA_LISTEN=:8960
+EXPOSE 8960
+ENTRYPOINT ["/usr/local/bin/lanhub-media"]
