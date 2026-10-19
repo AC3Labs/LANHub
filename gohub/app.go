@@ -33,6 +33,7 @@ type App struct {
 
 	media mediaConfig
 	plans planCache
+	upd   *updater
 }
 
 type netSample struct {
@@ -45,6 +46,7 @@ func newApp(cfg Config, store *Store) (*App, error) {
 		media: mediaConfig{url: cfg.MediaURL, secret: cfg.MediaSecret, sourceBase: cfg.MediaSourceBase},
 		plans: planCache{items: map[string]cachedPlan{}}}
 	app.mailer = &Mailer{store: store, appName: cfg.AppName}
+	app.upd = newUpdater(app)
 	app.relays = newRelayManager(app)
 	if err := app.loadTemplates(); err != nil {
 		return nil, err
@@ -98,11 +100,18 @@ type pageData struct {
 	AppName string
 	Version string
 	Data    any
+	// UpdateVersion is a newer LANHub, shown to admins as a banner.
+	UpdateVersion string
 }
 
 func (app *App) render(w http.ResponseWriter, r *http.Request, status int, page, title string, data any) {
 	s := sessionFrom(r)
 	pd := pageData{Title: title, Page: page, User: userFrom(r), AppName: app.cfg.AppName, Version: app.cfg.Version, Data: data}
+	if pd.User != nil && pd.User.IsAdmin && page != "settings" {
+		if st := app.upd.status(); st.Phase != "downloading" && st.Phase != "restarting" {
+			pd.UpdateVersion = app.upd.latest()
+		}
+	}
 	if s != nil {
 		pd.CSRF = s.CSRF
 		pd.Flash = s.TakeFlash()
@@ -223,6 +232,10 @@ func (app *App) routes() http.Handler {
 	mux.Handle("POST /profile/authenticator/{action}", auth(app.authenticatorAction))
 	mux.Handle("POST /profile/delete", auth(app.deleteAccount))
 	mux.Handle("GET /settings", admin(app.settings))
+	mux.Handle("POST /settings/updates/check", admin(app.updatesCheck))
+	mux.Handle("POST /settings/updates/install", admin(app.updatesInstall))
+	mux.Handle("POST /settings/updates/options", admin(app.updatesOptions))
+	mux.Handle("GET /api/updates/status", admin(app.updatesStatus))
 	mux.Handle("POST /settings", admin(app.saveSettings))
 	mux.Handle("GET /setup", guest(app.showSetup))
 	mux.Handle("POST /setup", guest(app.doSetup))
@@ -271,6 +284,10 @@ func (app *App) requireAuth(next handler) handler {
 			if wantsJSON(r) {
 				writeJSON(w, http.StatusUnauthorized, map[string]string{"message": "Your session has ended. Log in again."})
 				return
+			}
+			// Come back here after logging in (e.g. an email's Update button).
+			if s := sessionFrom(r); s != nil && r.Method == http.MethodGet {
+				s.Set("url.intended", r.URL.RequestURI())
 			}
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return

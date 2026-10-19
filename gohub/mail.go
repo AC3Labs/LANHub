@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"mime"
+	"mime/quotedprintable"
 	"net"
 	"net/smtp"
 	"strings"
@@ -24,14 +25,20 @@ func (m *Mailer) Configured() bool { return m.store.Setting("smtp_host") != "" }
 
 // Check connects and logs in to the mail server without sending anything.
 func (m *Mailer) Check() error {
-	return m.send("", "", "", true)
+	return m.send("", "", "", "", true)
 }
 
 func (m *Mailer) Send(to, subject, body string) error {
-	return m.send(to, subject, body, false)
+	return m.send(to, subject, body, "", false)
 }
 
-func (m *Mailer) send(to, subject, body string, checkOnly bool) error {
+// SendHTML sends a message with a plain-text and an HTML version; mail apps
+// show whichever they can.
+func (m *Mailer) SendHTML(to, subject, text, html string) error {
+	return m.send(to, subject, text, html, false)
+}
+
+func (m *Mailer) send(to, subject, body, html string, checkOnly bool) error {
 	host := m.store.Setting("smtp_host")
 	if host == "" {
 		if checkOnly {
@@ -96,17 +103,7 @@ func (m *Mailer) send(to, subject, body string, checkOnly bool) error {
 	if err != nil {
 		return err
 	}
-	msg := strings.Join([]string{
-		"From: " + mime.QEncoding.Encode("utf-8", fromName) + " <" + from + ">",
-		"To: " + to,
-		"Subject: " + mime.QEncoding.Encode("utf-8", subject),
-		"Date: " + time.Now().Format(time.RFC1123Z),
-		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=utf-8",
-		"Content-Transfer-Encoding: 8bit",
-		"",
-		strings.ReplaceAll(body, "\n", "\r\n"),
-	}, "\r\n")
+	msg := buildMessage(mime.QEncoding.Encode("utf-8", fromName)+" <"+from+">", to, subject, body, html)
 	if _, err := wc.Write([]byte(msg)); err != nil {
 		return err
 	}
@@ -114,4 +111,38 @@ func (m *Mailer) send(to, subject, body string, checkOnly bool) error {
 		return err
 	}
 	return c.Quit()
+}
+
+// buildMessage writes the email: plain text, or multipart/alternative with
+// an HTML part when there is one. Bodies are quoted-printable, so long HTML
+// lines stay inside SMTP's line limit.
+func buildMessage(from, to, subject, text, html string) string {
+	head := []string{
+		"From: " + from,
+		"To: " + to,
+		"Subject: " + mime.QEncoding.Encode("utf-8", subject),
+		"Date: " + time.Now().Format(time.RFC1123Z),
+		"MIME-Version: 1.0",
+	}
+	part := func(ctype, body string) []string {
+		return []string{"Content-Type: " + ctype + "; charset=utf-8", "Content-Transfer-Encoding: quoted-printable", "", quotedPrintable(body)}
+	}
+	if html == "" {
+		return strings.Join(append(head, part("text/plain", text)...), "\r\n")
+	}
+	boundary := "lanhub-" + randomToken(24)
+	lines := append(head, `Content-Type: multipart/alternative; boundary="`+boundary+`"`, "", "--"+boundary)
+	lines = append(lines, part("text/plain", text)...)
+	lines = append(lines, "--"+boundary)
+	lines = append(lines, part("text/html", html)...)
+	lines = append(lines, "--"+boundary+"--", "")
+	return strings.Join(lines, "\r\n")
+}
+
+func quotedPrintable(s string) string {
+	var b strings.Builder
+	w := quotedprintable.NewWriter(&b)
+	w.Write([]byte(strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\n", "\r\n")))
+	w.Close()
+	return b.String()
 }

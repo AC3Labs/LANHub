@@ -155,8 +155,9 @@ func (app *App) doVerify(w http.ResponseWriter, r *http.Request) {
 	app.limiter.Clear(key)
 	app.store.db.Exec(`UPDATE users SET two_factor_code = NULL, two_factor_expires_at = NULL WHERE id = ?`, u.ID)
 	remember, _ := s.Get("2fa.remember").(bool)
+	intended, _ := s.Get("url.intended").(string)
 	app.login(w, r, s, u.ID, remember)
-	http.Redirect(w, r, "/dashboard", http.StatusFound)
+	http.Redirect(w, r, safeIntended(intended), http.StatusFound)
 }
 
 // verifyAuthenticator mirrors User::verifyAuthenticatorCode(): a TOTP code
@@ -286,4 +287,12 @@ func clientIP(r *http.Request) string {
 		host = host[:i]
 	}
 	return strings.Trim(host, "[]")
+}
+
+// safeIntended only allows a path on this hub, never another site.
+func safeIntended(p string) string {
+	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") || strings.HasPrefix(p, "/\\") || strings.ContainsAny(p, "\r\n") {
+		return "/dashboard"
+	}
+	return p
 }

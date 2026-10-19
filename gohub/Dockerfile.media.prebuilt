@@ -2,6 +2,12 @@
 # video format) plus Intel VAAPI drivers for GPU encoding, and the small
 # lanhub-media service. Build context: dist-media/ (see build-media.sh).
 FROM alpine:3.22
+ARG LANHUB_VERSION=dev
+ARG LANHUB_REVISION=
+# The hub's Settings → Updates reads these to see what's published.
+LABEL org.opencontainers.image.version=$LANHUB_VERSION \
+      org.opencontainers.image.revision=$LANHUB_REVISION \
+      org.opencontainers.image.source=https://github.com/AC3Labs/LANHub
 RUN apk add --no-cache ffmpeg libva-intel-driver intel-media-driver ca-certificates \
     && adduser -D -H -u 65532 lanhub \
     && mkdir /media-key && chown 65532:65532 /media-key

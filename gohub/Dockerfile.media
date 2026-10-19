@@ -5,9 +5,16 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /lanhub-media ./cmd/lanhub-media
+ARG LANHUB_VERSION=dev
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$LANHUB_VERSION" -o /lanhub-media ./cmd/lanhub-media
 
 FROM alpine:3.22
+ARG LANHUB_VERSION=dev
+ARG LANHUB_REVISION=
+# The hub's Settings → Updates reads these to see what's published.
+LABEL org.opencontainers.image.version=$LANHUB_VERSION \
+      org.opencontainers.image.revision=$LANHUB_REVISION \
+      org.opencontainers.image.source=https://github.com/AC3Labs/LANHub
 RUN apk add --no-cache ffmpeg libva-intel-driver intel-media-driver ca-certificates \
     && adduser -D -H -u 65532 lanhub \
     && mkdir /media-key && chown 65532:65532 /media-key

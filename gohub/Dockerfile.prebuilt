@@ -1,6 +1,12 @@
 # Same image as Dockerfile, from a binary built elsewhere (see build-image.sh),
 # so a small box doesn't need the Go toolchain image.
 FROM scratch
+ARG LANHUB_VERSION=dev
+ARG LANHUB_REVISION=
+# The hub's Settings → Updates reads these to see what's published.
+LABEL org.opencontainers.image.version=$LANHUB_VERSION \
+      org.opencontainers.image.revision=$LANHUB_REVISION \
+      org.opencontainers.image.source=https://github.com/AC3Labs/LANHub
 COPY ca-certificates.crt /etc/ssl/certs/
 COPY lanhub-hub /lanhub-hub
 COPY --chown=65532:65532 empty /data

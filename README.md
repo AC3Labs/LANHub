@@ -126,6 +126,24 @@ start the agent because it isn't code-signed yet ("An Application Control
 policy has blocked this file"). There's no way to allow a single program
 while Smart App Control is on.
 
+### Keeping LANHub up to date
+
+Open **Settings → Updates**. **Check for updates** asks GitHub's registry
+what's published, and **Update to …** installs it: LANHub downloads the new
+hub and LANHub Media from the same images `docker compose pull` uses,
+checks every download against its checksum, and restarts. It's back in
+about ten seconds; LANHub Media switches over the next time no video is
+playing. If a new version doesn't start, LANHub goes back to the version in
+its image by itself.
+
+By default LANHub also checks every 6 hours. When there's a new version,
+admins see a banner with an **Update now** button, and get an email with an
+**Update LANHub** button (once email is set up). Both can be turned off on
+the same page.
+
+Pulling new images still works too, and also refreshes the images' system
+files (certificates, ffmpeg): `docker compose pull && docker compose up -d`.
+
 ### Upgrading from 0.9
 
 0.9 was a different hub (PHP), and its compose file keeps the database in a

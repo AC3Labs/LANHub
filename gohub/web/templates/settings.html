@@ -1,11 +1,16 @@
 {{define "content"}}
 {{$d := .Data}}
 <div class="bg-paper border-b border-stone-200">
-    <div class="max-w-[1600px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-[1600px] mx-auto pt-6 px-4 sm:px-6 lg:px-8">
         <h2 class="font-semibold text-xl text-stone-800">Settings</h2>
-        <p class="text-sm text-stone-500 mt-1">Email for login codes and invitations, and the address links in emails point to.</p>
+        <p class="text-sm text-stone-500 mt-1">Email for login codes and invitations, and keeping LANHub up to date.</p>
+        <nav class="mt-5 -mb-px flex gap-1" aria-label="Settings sections">
+            <a href="/settings?tab=email" class="{{if eq $d.Tab "updates"}}px-4 py-2 text-sm font-medium rounded-t-md text-stone-500 hover:text-stone-800{{else}}px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 border-stone-200 bg-stone-100 text-stone-800{{end}}" {{if ne $d.Tab "updates"}}aria-current="page"{{end}}>Email</a>
+            <a href="/settings?tab=updates" class="{{if eq $d.Tab "updates"}}px-4 py-2 text-sm font-medium rounded-t-md border border-b-0 border-stone-200 bg-stone-100 text-stone-800{{else}}px-4 py-2 text-sm font-medium rounded-t-md text-stone-500 hover:text-stone-800{{end}}" {{if eq $d.Tab "updates"}}aria-current="page"{{end}}>Updates</a>
+        </nav>
     </div>
 </div>
+{{if eq $d.Tab "updates"}}{{template "updates" .}}{{else}}
 <div class="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
     <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
         <h3 class="text-lg font-medium text-stone-800">Email (SMTP)</h3>
@@ -42,6 +47,93 @@
             <button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Save</button>
         </form>
         {{end}}
+    </div>
+</div>
+{{end}}
+{{end}}
+
+{{define "updates"}}
+{{$u := .Data.Upd}}
+<div class="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6" x-data="updateProgress({{json $u.Status}})">
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
+        <h3 class="text-lg font-medium text-stone-800">Version</h3>
+        <dl class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div><dt class="text-xs uppercase tracking-wide text-stone-500">This hub</dt>
+                <dd class="mt-1 font-mono text-stone-800">{{$u.Current}}</dd>
+                {{if $u.Staged}}<dd class="mt-1 text-xs text-stone-500">Installed from this page (the image has {{$u.ImageVersion}})</dd>{{end}}</div>
+            <div><dt class="text-xs uppercase tracking-wide text-stone-500">LANHub Media</dt>
+                <dd class="mt-1 font-mono text-stone-800">{{if $u.MediaVersion}}{{$u.MediaVersion}}{{else if $u.MediaError}}<span class="font-sans text-red-600">{{$u.MediaError}}</span>{{else}}<span class="font-sans text-stone-500">not set up</span>{{end}}</dd></div>
+            <div><dt class="text-xs uppercase tracking-wide text-stone-500">Latest published</dt>
+                <dd class="mt-1 font-mono text-stone-800">{{if $u.Published}}{{$u.Published}}{{else}}<span class="font-sans text-stone-500">not checked yet</span>{{end}}</dd>
+                {{if $u.CheckedAt}}<dd class="mt-1 text-xs text-stone-500">Checked {{ago $u.CheckedAt}}</dd>{{end}}</div>
+        </dl>
+        {{if $u.CheckError}}<p class="mt-4 text-sm text-red-600 break-words">Last check failed: {{$u.CheckError}}</p>{{end}}
+        {{if $u.HubFailed}}<p class="mt-4 text-sm text-red-600 break-words">Update {{$u.HubFailed}}</p>{{end}}
+        {{if $u.MediaFailed}}<p class="mt-4 text-sm text-red-600 break-words">LANHub Media update {{$u.MediaFailed}}</p>{{end}}
+        {{if $u.LastResult}}<p class="mt-4 text-sm text-stone-600 break-words">{{$u.LastResult}}</p>{{end}}
+
+        <template x-if="busy || done || failed">
+            <div class="mt-6 rounded-lg border p-4 text-sm" :class="failed ? 'border-red-200 bg-red-50 text-red-800' : 'border-tan-200 bg-tan-50 text-tan-800'" role="status" aria-live="polite">
+                <p class="font-medium" x-text="headline()"></p>
+                <p class="mt-1 break-words" x-text="detail"></p>
+                <p class="mt-1 text-xs" x-show="phase === 'downloading' && bytes > 0" x-text="Math.round(bytes / 1048576) + ' MB downloaded'"></p>
+            </div>
+        </template>
+
+        <div class="mt-6 flex flex-wrap items-start gap-3" x-show="!busy">
+            <form method="post" action="/settings/updates/check">
+                <input type="hidden" name="_token" value="{{.CSRF}}">
+                <button class="inline-flex items-center px-4 py-2 bg-white border border-stone-300 rounded-md font-semibold text-xs text-black uppercase tracking-widest shadow-sm hover:bg-gray-100 transition">Check for updates</button>
+            </form>
+            {{if $u.Latest}}
+            <form method="post" action="/settings/updates/install" onsubmit="return confirm('Update LANHub to {{$u.Latest}} now? The hub restarts, which takes about ten seconds.{{if $u.ActiveTransfers}} {{$u.ActiveTransfers}} transfer(s) in progress will be interrupted.{{end}}')">
+                <input type="hidden" name="_token" value="{{.CSRF}}"><input type="hidden" name="version" value="{{$u.Latest}}">
+                <button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Update to {{$u.Latest}}</button>
+            </form>
+            {{end}}
+        </div>
+        {{if and $u.Install (not $u.Latest)}}<p class="mt-3 text-sm text-stone-600">This hub already runs {{$u.Current}}, so there's nothing to install.</p>{{end}}
+        {{if not $u.Latest}}{{if $u.Published}}<p class="mt-3 text-sm text-stone-600" x-show="!busy && !done">LANHub is up to date.</p>{{end}}{{end}}
+    </div>
+
+    {{if $u.Latest}}
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg{{if $u.Install}} ring-2 ring-tan-400{{end}}">
+        <h3 class="text-lg font-medium text-stone-800">What's new in {{$u.Latest}}</h3>
+        {{if $u.Notes}}
+            <pre class="mt-4 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-stone-700 bg-stone-100 border border-stone-200 rounded-md p-4 max-h-96 overflow-auto">{{$u.Notes}}</pre>
+        {{else}}
+            <p class="mt-3 text-sm text-stone-500">No release notes were found for this version.</p>
+        {{end}}
+        {{if $u.ActiveTransfers}}<p class="mt-4 text-sm text-amber-700">{{$u.ActiveTransfers}} transfer(s) are running now; updating interrupts them.</p>{{end}}
+    </div>
+    {{end}}
+
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
+        <h3 class="text-lg font-medium text-stone-800">Update alerts</h3>
+        <form method="post" action="/settings/updates/options" class="mt-4 space-y-4">
+            <input type="hidden" name="_token" value="{{.CSRF}}">
+            <label class="flex items-start gap-3 text-sm text-stone-700">
+                <input type="checkbox" name="auto_check" value="1" class="mt-0.5 rounded border-stone-300 text-tan-600 focus:ring-tan-400" {{if $u.AutoCheck}}checked{{end}}>
+                <span>Check for updates automatically, every 6 hours. Admins see a banner when one is available.
+                {{if not $u.SchedulerOn}}<span class="block text-xs text-amber-700 mt-1">Automatic checks need background tasks, which are off on this hub (LANHUB_SCHEDULER).</span>{{end}}</span>
+            </label>
+            <label class="flex items-start gap-3 text-sm text-stone-700">
+                <input type="checkbox" name="email" value="1" class="mt-0.5 rounded border-stone-300 text-tan-600 focus:ring-tan-400" {{if $u.Email}}checked{{end}}>
+                <span>Email every admin when a new version is found, with an <b>Update LANHub</b> button.
+                {{if not $u.MailConfigured}}<span class="block text-xs text-amber-700 mt-1">Set up email on the Email tab first.</span>{{end}}</span>
+            </label>
+            <button class="inline-flex items-center px-4 py-2 bg-tan-500 border border-transparent rounded-md font-semibold text-xs text-black uppercase tracking-widest hover:bg-tan-600 focus:outline-none focus:ring-2 focus:ring-tan-400 focus:ring-offset-2 transition ease-in-out duration-150">Save</button>
+        </form>
+    </div>
+
+    <div class="p-4 sm:p-8 bg-paper shadow-soft border border-stone-200 sm:rounded-lg">
+        <h3 class="text-lg font-medium text-stone-800">How updating works</h3>
+        <ul class="mt-3 space-y-2 text-sm text-stone-600 list-disc pl-5">
+            <li>LANHub downloads the new hub{{if $u.MediaUpdatable}} and LANHub Media{{end}} from the same published images <span class="font-mono">docker compose pull</span> uses, checks every download against its checksum, then restarts. The page is back in about ten seconds.</li>
+            {{if $u.MediaUpdatable}}<li>LANHub Media switches over by itself the next time no video is playing.</li>{{else}}<li>LANHub Media can't be updated from here on this hub; update its image with <span class="font-mono">docker compose pull</span>.</li>{{end}}
+            <li>If the new version doesn't start properly, LANHub goes back to the version in its image by itself.</li>
+            <li>The images' system files (security certificates, ffmpeg) only change when you pull new images: run <span class="font-mono">docker compose pull &amp;&amp; docker compose up -d</span> now and then.</li>
+        </ul>
     </div>
 </div>
 {{end}}

@@ -256,6 +256,8 @@ type settingsData struct {
 	Port                                                                                          int
 	HasPassword                                                                                   bool
 	Errors                                                                                        map[string]string
+	Tab                                                                                           string // "email" or "updates"
+	Upd                                                                                           *updatesData
 }
 
 func (app *App) loadSettings() settingsData {
@@ -283,7 +285,12 @@ func (app *App) loadSettings() settingsData {
 }
 
 func (app *App) settings(w http.ResponseWriter, r *http.Request) {
-	app.render(w, r, http.StatusOK, "settings", "Settings", app.loadSettings())
+	d := app.loadSettings()
+	d.Tab = "email"
+	if r.URL.Query().Get("tab") == "updates" {
+		d.Tab, d.Upd = "updates", app.updatesView(r)
+	}
+	app.render(w, r, http.StatusOK, "settings", "Settings", d)
 }
 
 func (app *App) saveSettings(w http.ResponseWriter, r *http.Request) {
@@ -295,6 +302,7 @@ func (app *App) saveSettings(w http.ResponseWriter, r *http.Request) {
 			if p, err := url.Parse(addr); err != nil || (p.Scheme != "http" && p.Scheme != "https") || p.Host == "" {
 				d.Errors["hub_address"] = "Enter an address starting with http:// or https://."
 				d.HubAddress = addr
+				d.Tab = "email"
 				app.render(w, r, http.StatusUnprocessableEntity, "settings", "Settings", d)
 				return
 			}
@@ -326,6 +334,7 @@ func (app *App) saveSettings(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if len(d.Errors) > 0 {
+			d.Tab = "email"
 			app.render(w, r, http.StatusUnprocessableEntity, "settings", "Settings", d)
 			return
 		}

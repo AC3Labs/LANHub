@@ -558,3 +558,45 @@ function lanhubPlayer(machineId, path) {
         fullscreen() { const el = this.$root; document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen && el.requestFullscreen(); },
     };
 }
+
+// Settings → Updates: follows an update while it downloads, while the hub
+// restarts (requests fail for a few seconds), and until the new version
+// answers, then reloads the page.
+function updateProgress(initial) {
+    return {
+        phase: initial.phase || '', detail: initial.detail || '', target: initial.target || '',
+        bytes: initial.bytes || 0, version: initial.version || '', done: false, timer: null, misses: 0,
+        get busy() { return this.phase === 'downloading' || this.phase === 'restarting'; },
+        get failed() { return this.phase === 'failed'; },
+        init() { if (this.busy) this.poll(); },
+        headline() {
+            if (this.done) return 'Updated to ' + this.target + '. Reloading…';
+            if (this.failed) return 'The update didn\'t finish';
+            if (this.phase === 'restarting') return 'Restarting LANHub…';
+            return 'Updating to ' + this.target + '…';
+        },
+        poll() {
+            clearTimeout(this.timer);
+            this.timer = setTimeout(async () => {
+                try {
+                    const r = await fetch('/api/updates/status', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+                    if (!r.ok) throw new Error(r.status);
+                    const s = await r.json();
+                    this.misses = 0;
+                    if (this.target && s.version === this.target) {
+                        this.done = true; this.phase = ''; this.detail = 'LANHub ' + s.version + ' is running.';
+                        setTimeout(() => location.assign('/settings?tab=updates'), 1500);
+                        return;
+                    }
+                    Object.assign(this, { phase: s.phase, detail: s.detail, bytes: s.bytes, target: s.target || this.target });
+                } catch (e) {
+                    // The hub is restarting.
+                    this.misses++;
+                    this.phase = 'restarting';
+                    this.detail = this.misses > 60 ? 'This is taking longer than expected. Reload the page in a minute.' : 'Waiting for LANHub to come back…';
+                }
+                if (this.busy) this.poll();
+            }, 1500);
+        },
+    };
+}

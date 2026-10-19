@@ -39,10 +39,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read the release version
+        id: version
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           context: ./gohub
           file: ./gohub/Dockerfile
+          build-args: |
+            LANHUB_VERSION=${{ steps.version.outputs.version }}
+            LANHUB_REVISION=${{ github.sha }}
           push: true
           # Hardcoded lowercase: GHCR image names must be lowercase, and
           # ${{ github.repository_owner }} would resolve to "AC3Labs".
@@ -56,6 +63,9 @@ jobs:
         with:
           context: ./gohub
           file: ./gohub/Dockerfile.media
+          build-args: |
+            LANHUB_VERSION=${{ steps.version.outputs.version }}
+            LANHUB_REVISION=${{ github.sha }}
           push: true
           tags: |
             ghcr.io/ac3labs/lanhub:media

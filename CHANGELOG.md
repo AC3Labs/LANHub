@@ -3,6 +3,30 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.12.0.0] - 2026-10-19
+
+### Added
+- Updates from the web page. Settings has two tabs now: Email (the mail
+  settings) and Updates. Updates shows the hub's and LANHub Media's
+  versions and what's published, with Check for updates and Update to …
+  buttons and the release notes for what's new.
+- Installing an update downloads the new hub and LANHub Media from the
+  published images (no Docker access needed), checks every download
+  against its checksum and that the programs run and report the right
+  version, then restarts in place in a few seconds. LANHub Media switches
+  over when no video is playing. A new version that doesn't start three
+  times in a row is set aside and LANHub goes back to the version in its
+  image by itself.
+- Update alerts: LANHub checks every 6 hours. Admins see a banner with an
+  Update now button, and get one email per new version with an Update
+  LANHub button (and an ntfy push, when that's set up). Both can be turned
+  off.
+- The published images carry their version and commit as labels.
+
+### Fixed
+- Logging in now returns you to the page you were trying to open (like
+  the link in an update email) instead of always going to the dashboard.
+
 ## [0.11.0.1] - 2026-10-19
 
 ### Changed

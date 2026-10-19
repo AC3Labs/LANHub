@@ -80,7 +80,9 @@ func ago(t any) string {
 	case string:
 		p, err := time.Parse(time.RFC3339, v)
 		if err != nil {
-			return v
+			if p, err = time.Parse(dbTime, v); err != nil {
+				return v
+			}
 		}
 		tt = p
 	default:

@@ -2,4 +2,4 @@ package main
 
 // hubVersion continues LANHub's version line: 0.10.0.0 is the first release
 // where this Go hub replaced the PHP hub (0.9.3.0) as the running LANHub.
-const hubVersion = "0.11.0.1"
+const hubVersion = "0.12.0.0"

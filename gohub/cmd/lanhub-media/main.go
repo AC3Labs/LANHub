@@ -19,7 +19,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,13 +31,17 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
-const version = "0.1.0.0"
+// version is set at build time (-ldflags "-X main.version=…") to the LANHub
+// release it ships with.
+var version = "dev"
 
 type config struct {
 	listen        string
@@ -85,6 +91,10 @@ type server struct {
 }
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--version" {
+		fmt.Println(version)
+		return
+	}
 	cfg := config{
 		listen:        getenv("MEDIA_LISTEN", ":8960"),
 		secret:        os.Getenv("MEDIA_SECRET"),
@@ -98,6 +108,15 @@ func main() {
 	}
 	if len(cfg.secret) < 16 {
 		log.Fatal("MEDIA_SECRET must be set (16+ characters) and shared with the hub, or MEDIA_SECRET_FILE must point at the file the hub creates")
+	}
+	// The hub drops newer versions of this program next to the secret
+	// (Settings → Updates).
+	stagedDir := ""
+	if f := os.Getenv("MEDIA_SECRET_FILE"); f != "" {
+		stagedDir = filepath.Join(filepath.Dir(f), "update")
+		if bin := stagedToRun(stagedDir); bin != "" {
+			execStaged(bin)
+		}
 	}
 	cfg.vaapiDevice = detectVAAPI(getenv("MEDIA_HWACCEL", "auto"))
 	s := &server{cfg: cfg, transcodes: make(chan struct{}, cfg.maxTranscodes), remuxes: make(chan struct{}, cfg.maxRemux)}
@@ -113,7 +132,85 @@ func main() {
 	}
 	log.Printf("LANHub Media %s on %s: video encoding by %s, up to %d conversion(s) and %d repackaging(s) at once, max %dp",
 		version, cfg.listen, hw, cfg.maxTranscodes, cfg.maxRemux, cfg.maxHeight)
+	if stagedDir != "" {
+		go s.watchStaged(stagedDir)
+	}
 	log.Fatal(srv.ListenAndServe())
+}
+
+// ---- updates staged by the hub ----
+
+type stagedManifest struct {
+	Version string `json:"version"`
+	SHA256  string `json:"sha256"`
+	Failed  bool   `json:"failed"`
+}
+
+// stagedToRun returns the staged program when it's newer than this one, not
+// marked failed by the hub, and intact.
+func stagedToRun(dir string) string {
+	b, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
+	if err != nil {
+		return ""
+	}
+	var m stagedManifest
+	if json.Unmarshal(b, &m) != nil || m.Failed || compareVersions(m.Version, version) <= 0 {
+		return ""
+	}
+	bin := filepath.Join(dir, "lanhub-media")
+	f, err := os.Open(bin)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	io.Copy(h, f)
+	if hex.EncodeToString(h.Sum(nil)) != m.SHA256 {
+		log.Printf("update: the staged %s doesn't match its checksum; ignoring it", m.Version)
+		return ""
+	}
+	return bin
+}
+
+func execStaged(bin string) {
+	log.Printf("update: switching to %s", bin)
+	if err := syscall.Exec(bin, append([]string{bin}, os.Args[1:]...), os.Environ()); err != nil {
+		log.Printf("update: couldn't start %s: %v", bin, err)
+	}
+}
+
+// watchStaged switches to a newly staged version as soon as nothing is
+// being converted.
+func (s *server) watchStaged(dir string) {
+	for range time.Tick(30 * time.Second) {
+		if s.active.Load() != 0 {
+			continue
+		}
+		if bin := stagedToRun(dir); bin != "" {
+			execStaged(bin)
+		}
+	}
+}
+
+// compareVersions compares dotted numeric versions; "dev" counts as 0.
+func compareVersions(a, b string) int {
+	pa, pb := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < max(len(pa), len(pb)); i++ {
+		var x, y int
+		if i < len(pa) {
+			x, _ = strconv.Atoi(pa[i])
+		}
+		if i < len(pb) {
+			y, _ = strconv.Atoi(pb[i])
+		}
+		if x != y {
+			if x < y {
+				return -1
+			}
+			return 1
+		}
+	}
+	return 0
 }
 
 // detectVAAPI checks that the GPU can really encode H.264 by encoding one
