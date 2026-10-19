@@ -3,6 +3,22 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.11.0.1] - 2026-10-19
+
+### Changed
+- The hub and LANHub Media are published as ready-made images,
+  `ghcr.io/ac3labs/lanhub:hub` and `ghcr.io/ac3labs/lanhub:media`, and
+  `docker-compose.yml` uses them. `:latest` stays the last 0.9 image so
+  existing 0.9 installs don't change under them.
+- README: "Upgrading from 0.9" (copy the database and key into the new
+  volume once; tested on a real 0.9 install), corrected agent install steps
+  (the token goes in the installed config.json), notes on Windows Smart App
+  Control and on plain-HTTP connections.
+
+### Fixed
+- The ntfy "update pushed" reminder looked at the old hub's folder, and
+  missed pushes of more than one commit.
+
 ## [0.11.0.0] - 2026-10-18
 
 ### Added

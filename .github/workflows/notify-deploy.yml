@@ -17,7 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # Full history: a push of several commits (a merge) needs its whole range.
+          fetch-depth: 0
 
       - name: Determine what changed
         id: changed
@@ -33,7 +34,7 @@ jobs:
           HUB_CHANGED=false
           AGENT_CHANGED=false
 
-          if echo "$FILES" | grep -q '^hub/'; then
+          if echo "$FILES" | grep -q '^gohub/'; then
             HUB_CHANGED=true
           fi
           if echo "$FILES" | grep -q '^agent/'; then
@@ -66,7 +67,7 @@ jobs:
 
           BODY="${COMMIT_MSG}"$'\n\n'"Redeploy needed: ${WHAT}"
           if [ "${{ steps.changed.outputs.hub }}" = "true" ]; then
-            BODY="${BODY}"$'\n''- Hub: rsync -> docker build -> recreate container on nas'
+            BODY="${BODY}"$'\n''- Hub: once the images are published, docker compose pull && docker compose up -d on the Docker Server'
           fi
           if [ "${{ steps.changed.outputs.agent }}" = "true" ]; then
             BODY="${BODY}"$'\n''- Agent: copy the new binary from agent/dist/ to every registered machine and restart its service'

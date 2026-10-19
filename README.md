@@ -59,14 +59,13 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 
 You only need one file, `docker-compose.yml`, and you don't have to edit it.
 You don't need to clone this repo, create a `.env` file, or generate any
-keys. (On this `go-hub` branch there's no published image yet, so the first
-start builds the hub and LANHub Media from GitHub. It takes a few minutes,
-once.)
+keys. It starts two containers: the hub, and LANHub Media for video
+previews.
 
 **Plain Docker** (any Linux server, x86-64):
 
 ```
-curl -O https://raw.githubusercontent.com/AC3Labs/LANHub/go-hub/docker-compose.yml
+curl -O https://raw.githubusercontent.com/AC3Labs/LANHub/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -103,30 +102,63 @@ EMAIL -password PASSWORD`.)
   already using port 8949. In `docker-compose.yml`, change the left-hand
   number under `ports:`, e.g. `"8950:8000"`. Deploy again and browse to
   that port instead.
-- A build error mentioning `intel-media-driver` means your server isn't
-  x86-64 (for example a Raspberry Pi or other ARM device). Only x86-64 is
-  supported right now.
+- *"no matching manifest"* means your server isn't x86-64 (for example a
+  Raspberry Pi or other ARM device). Only x86-64 is published right now.
 - Anything else: run `docker compose logs hub`. The hub explains what's
   wrong in plain language, either in that log or on the page itself.
 
 ### 2. Install an agent on each machine you want to browse
 
-See `agent/README.md`. Short version: register the machine from the hub's
-Machines page first (it generates a token), then on that machine:
+See `agent/README.md`. Short version: add the machine on the hub's
+Dashboard first (**Add Machine**; it gives you a token), then on that
+machine, from a copy of this repo's `agent/` folder:
+
+- **Linux:** run `sudo install/install-linux.sh` from your normal account
+  (not a root shell, or the agent will run as root). Put the token in
+  `/opt/lanhub-agent/config.json`, then `sudo systemctl start lanhub-agent`.
+- **Windows:** right-click Start, choose **Terminal (Admin)**, and run
+  `powershell -ExecutionPolicy Bypass -File install\install-windows.ps1`.
+  Put the token in `C:\LANHub-Agent\config.json`, then
+  `Restart-Service LANHubAgent`.
+
+On Windows 11 with **Smart App Control** turned on, Windows may refuse to
+start the agent because it isn't code-signed yet ("An Application Control
+policy has blocked this file"). There's no way to allow a single program
+while Smart App Control is on.
+
+### Upgrading from 0.9
+
+0.9 was a different hub (PHP), and its compose file keeps the database in a
+volume called `hub_db`. 0.11 reads that database and encryption key
+unchanged, so nobody has to set anything up again; they just need copying
+into the new volume once. In the folder with your old `docker-compose.yml`:
 
 ```
-cd agent
-cp config.example.json config.json   # paste the generated token in
-sudo install/install-linux.sh        # or install/install-windows.ps1 as Administrator
+docker compose down                      # stops the old hub; your data stays in its volume
+curl -O https://raw.githubusercontent.com/AC3Labs/LANHub/main/docker-compose.yml
+docker compose create                    # makes the new containers and volumes, starts nothing
+docker run --rm -v "${PWD##*/}_hub_db:/old:ro" -v "${PWD##*/}_hub_data:/new" alpine sh -c \
+  'cp /old/database.sqlite /new/ && { [ ! -f /old/.app_key ] || cp /old/.app_key /new/app.key; } && chown -R 65532:65532 /new'
+docker compose up -d
 ```
+
+If your old compose file set `APP_KEY` itself, set the same `APP_KEY` in the
+new one. (`docker volume ls` shows the volume names if your project isn't
+named after its folder.) Log in as before. The old volume is left alone,
+so going back is just restoring the old compose file. Agents from 0.9 keep
+working; updating them to 1.2.0 makes seeking in big videos faster.
 
 ## Security notes
 
 - This is built for a trusted LAN, not the public internet. Don't expose
   the hub or any agent directly to the internet without putting real
   authentication/network controls in front of them.
-- Agent-to-hub HTTPS uses self-signed certificates (there's no public CA
-  involved) — see the `--tls`/`-Tls` install flags in `agent/README.md`.
+- The hub talks to agents over plain HTTP, with a token, unless you
+  install the agent with `--tls`/`-Tls` (a self-signed certificate; there's
+  no public CA involved). Fine on a home network you trust; turn it on if
+  you don't. See `agent/README.md`.
+- The browser talks to the hub over plain HTTP too, unless you put it
+  behind a reverse proxy with HTTPS.
 - Two-factor login is required for every user on every login; there is no
   "remember this device" bypass. Each user picks an authenticator app or
   emailed codes. If someone loses their phone and their recovery codes, an
