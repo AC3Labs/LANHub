@@ -213,6 +213,9 @@ type AgentHealth struct {
 	OS       string   `json:"os"`
 	Version  string   `json:"version"`
 	Features []string `json:"features"`
+	// Addresses are the machine's own IPs (agent 1.3.0+), used to name the
+	// destination in a direct-transfer pass.
+	Addresses []string `json:"addresses"`
 }
 
 func (h AgentHealth) Has(feature string) bool {

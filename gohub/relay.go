@@ -88,6 +88,11 @@ type relayJob struct {
 	sa, da   *AgentClient
 	bytes    atomic.Int64
 	ctx      context.Context
+
+	direct      bool     // agents fetch from each other (see direct.go)
+	holders     []string // the destination's addresses, for its passes
+	fileN       int      // files sent direct so far, numbering their passes
+	directFiles int
 }
 
 func (rm *RelayManager) run(id int64, src *Machine, srcPath string, dst *Machine, dstPath, kind string, isDir bool) (err error) {
@@ -127,13 +132,19 @@ func (rm *RelayManager) run(id int64, src *Machine, srcPath string, dst *Machine
 	}()
 	defer close(stop)
 
+	j.direct = j.canGoDirect()
 	if isDir {
 		err = j.relayFolder(srcPath, dstPath)
+	} else if e, lookErr := j.sourceEntry(srcPath); j.direct && lookErr == nil {
+		err = j.copyFile(e, dstPath)
 	} else {
 		err = j.relayFile(srcPath, dstPath)
 	}
 	if err != nil {
 		return err
+	}
+	if j.directFiles > 0 {
+		logf("relay #%d: %d file(s) sent agent to agent", id, j.directFiles)
 	}
 	// Only reached when every file arrived, so a move never deletes the
 	// source of a partial copy.
@@ -252,7 +263,7 @@ func (j *relayJob) relayFolder(srcPath, dstRoot string) error {
 				queue = append(queue, item{e.Path, target, it.depth + 1})
 				continue
 			}
-			if err := j.relayFile(e.Path, target); err != nil {
+			if err := j.copyFile(&e, target); err != nil {
 				return err
 			}
 		}

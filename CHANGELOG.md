@@ -3,6 +3,27 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.13.0.0] - 2026-10-19
+
+### Added
+- Direct transfers: copying or moving between two machines now goes
+  straight from one agent to the other instead of through the hub, so it
+  runs at the speed of the two machines' own network links and the hub
+  stays idle. Each file is checked with a SHA-256 checksum on both ends
+  before it gets its real name; until then it's a hidden partial file, and
+  a dropped connection resumes where it stopped. Both agents need to be
+  1.3.0 or later; with an older agent, or if one machine can't reach the
+  other, LANHub relays through the hub as before.
+- Agent 1.3.0: the endpoints for direct transfers (see
+  `docs/AGENT_API.md`). It works with older hubs too.
+- The Agents page shows each agent's version and whether it can do direct
+  transfers.
+
+### Changed
+- The Agents page opens straight away and then checks each agent, with a
+  "Checking…" badge on each card until its agent answers. Before, the page
+  waited for every agent (up to 3 s for one that was asleep).
+
 ## [0.12.0.0] - 2026-10-19
 
 ### Added

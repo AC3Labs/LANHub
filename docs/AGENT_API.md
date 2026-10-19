@@ -11,7 +11,8 @@ same HTTP contract so the hub's code never branches on OS.
 - Every request must carry `Authorization: Bearer <agent_token>`. The token is
   generated when you register the machine in the hub and pasted into the
   agent's config file on that machine. Requests without a valid token get
-  `401`.
+  `401`. The one exception is `/api/pass-download` (see "Direct transfers"),
+  which takes a hub-signed pass instead.
 - All request/response bodies are JSON except `/api/download` (raw bytes) and
   `/api/upload` (multipart form).
 - Paths are always **absolute, native paths** for that machine's OS
@@ -23,8 +24,13 @@ same HTTP contract so the hub's code never branches on OS.
 ### `GET /api/health`
 Returns liveness + identity info, polled by the hub to show online/offline status.
 ```json
-{ "hostname": "desktop-01", "os": "windows", "version": "0.1.0" }
+{ "hostname": "desktop-01", "os": "windows", "version": "1.3.0", "features": ["range", "fetch"] }
 ```
+`features` lists what the agent can do beyond the 1.1.0 API: `range` (1.2.0,
+Range requests on downloads and previews) and `fetch` (1.3.0, direct
+transfers). Older agents send no `features`. 1.3.0 also sends
+`addresses`, the machine's own IP addresses (not loopback), which the hub
+puts in a direct-transfer pass as the addresses the fetch may come from.
 
 ### `GET /api/drives`
 Returns the root volumes to seed the file tree.
@@ -147,7 +153,50 @@ scoped.
 
 ## Cross-machine transfers
 
-There's no agent-to-agent traffic. When you drag a file from Machine A to
-Machine B, the hub streams it: `AgentClient::download()` from A into a
-temporary stream, then `AgentClient::upload()` to B. This keeps every trust
-boundary at the hub, which is the only thing that holds both tokens.
+When both agents support `fetch` (1.3.0 and later), the destination agent
+pulls each file straight from the source agent (below). Otherwise, or if a
+direct transfer can't start, the hub streams it: download from A, upload to
+B, without writing it to the hub's disk.
+
+## Direct transfers (agent 1.3.0, feature `fetch`)
+
+Design and threat model: `docs/DIRECT_TRANSFER_DESIGN.md`. In short, the hub
+signs a **pass** for one file with the *source* agent's token, gives it to
+the destination, and the destination downloads with it. No agent ever holds
+another agent's token.
+
+Pass: `base64url(json) "." base64url(HMAC-SHA256(key = source token, json))`,
+json = `{v: 1, job, file, path, size, mtime, holders, expires, nonce}`.
+
+### Source side
+- `GET /api/pass-download` with header `X-LANHub-Pass: <pass>` and no bearer
+  token. Serves exactly `path` (Range supported) if the signature checks, the
+  pass hasn't expired or been retired, the caller's address is one of
+  `holders` (when given), and the file's size and mtime still match. `401` bad/expired pass,
+  `403` retired or not from a holder address, `409` file changed or the pass is already
+  streaming.
+- `GET /api/hash?path=` → `{ "path", "size", "sha256" }`.
+- `POST /api/passes/retire` `{ "job": 12, "file": 1 }`: refuse every pass for
+  that job/file from now on.
+
+### Destination side
+- `POST /api/fetches` `{ "source_url", "pass", "destination", "size",
+  "insecure" }` → a fetch `{ "id", "destination", "size", "status", "bytes",
+  "sha256", "error" }`. `destination` is the full path of the new file;
+  `409` if it already exists. The file is written to
+  `.lanhub-partial-<id>` in the same folder (hidden from `/api/list` and
+  `/api/search`), hashed as it arrives, and resumed with Range after a
+  dropped connection. `insecure` skips certificate checks for a source on a
+  private address with a self-signed certificate.
+- `GET /api/fetches/{id}`: status is `fetching`, `received` (complete, with
+  `sha256`), `error`, `committed` or `aborted`.
+- `POST /api/fetches/{id}/pass` `{ "pass" }`: a fresh pass for reconnects
+  during a long fetch.
+- `POST /api/fetches/{id}/commit`: renames the partial file to the real
+  name. `409` if the fetch isn't `received` or the name now exists.
+- `POST /api/fetches/{id}/abort`: stops the fetch and deletes the partial
+  file.
+
+The hub commits only after the destination's `sha256` matches the source's
+`/api/hash`, and deletes the source of a move only after every file is
+committed.

@@ -16,6 +16,9 @@ across Windows and Linux.
 - Cross-machine and whole-tree search.
 - Inline preview for images, PDFs, and text files.
 - A transfer queue with progress for anything too large to wait on.
+- Direct transfers: between two machines, files go straight from one
+  agent to the other (checksum-verified, resumable), not through the hub.
+  Needs agent 1.3.0 or later on both; otherwise the hub relays them.
 - Scheduled sync rules (one-way or mirror) between two machines, with
   conflict detection — never silently overwrites a file that changed
   since it was last scanned.
@@ -143,6 +146,13 @@ the same page.
 
 Pulling new images still works too, and also refreshes the images' system
 files (certificates, ffmpeg): `docker compose pull && docker compose up -d`.
+
+The hub doesn't update the agents. To update one, run its installer again
+from a fresh copy of this repo's `agent/` folder; it keeps the existing
+`config.json` (and token). On Linux, then run
+`sudo systemctl restart lanhub-agent`. The **Agents** page shows each
+agent's version. Direct transfers need agent 1.3.0 or later on both
+machines.
 
 ### Upgrading from 0.9
 

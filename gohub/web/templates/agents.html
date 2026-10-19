@@ -19,8 +19,8 @@
             </div>
         {{else}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {{range .Data.Cards}}{{$m := .M}}{{$s := .S}}{{$online := eq $m.Status "online"}}
-            <div class="rounded-xl bg-paper shadow-soft border border-stone-200 p-5 flex flex-col gap-4">
+            {{range .Data.Cards}}{{$m := .M}}{{$s := .S}}
+            <div x-data="agentCard({{$m.ID}}, {{json (ago $m.LastSeenAt)}})" class="rounded-xl bg-paper shadow-soft border border-stone-200 p-5 flex flex-col gap-4">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white font-semibold" style="background-color: {{color $m.Color}}">{{$m.Initial}}</span>
@@ -29,12 +29,16 @@
                             <p class="text-xs text-stone-500">{{$m.Host}}:{{$m.Port}}</p>
                         </div>
                     </div>
-                    <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full {{if $online}}bg-green-100 text-green-700{{else}}bg-red-100 text-red-700{{end}}">
-                        <span class="w-1.5 h-1.5 rounded-full {{if $online}}bg-green-500{{else}}bg-red-500{{end}}"></span>
-                        {{if $online}}Online{{else}}Offline{{end}}
+                    <span x-show="status === 'checking'" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-stone-100 text-stone-600">
+                        <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Checking…
+                    </span>
+                    <span x-show="status !== 'checking'" x-cloak :class="status === 'online' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full">
+                        <span :class="status === 'online' ? 'bg-green-500' : 'bg-red-500'" class="w-1.5 h-1.5 rounded-full"></span>
+                        <span x-text="status === 'online' ? 'Online' : 'Offline'"></span>
                     </span>
                 </div>
-                {{if $m.LastSeenAt}}<p class="text-xs text-stone-400 -mt-2">Last seen {{ago $m.LastSeenAt}}</p>{{end}}
+                <p x-show="lastSeen || version" x-cloak class="text-xs text-stone-400 -mt-2"><span x-show="lastSeen" x-text="'Last seen ' + lastSeen"></span><span x-show="lastSeen && version"> · </span><span x-show="version" x-text="'Agent ' + version"></span><span x-show="direct"> · direct transfers</span></p>
                 <div class="grid grid-cols-2 gap-3 pt-3 border-t border-stone-100">
                     <div>
                         <p class="text-[10px] uppercase tracking-wide text-stone-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>Sent</p>

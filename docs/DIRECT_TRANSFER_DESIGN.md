@@ -1,7 +1,17 @@
-# Direct agent-to-agent transfers (design, not built)
+# Direct agent-to-agent transfers
 
-Status: design for review, 2026-10-18. Nothing here is implemented. It is
-independent of the hub language: the PHP hub or a Go hub could drive it.
+Status: built in 0.13.0.0 (hub) and agent 1.3.0, 2026-10-19. Wire details
+are in `AGENT_API.md`. Differences from the original design below:
+files in a folder go one at a time (as the relay does), not two at once;
+stale partial files are swept from the folder being written to when a new
+fetch starts there, rather than across every root at start-up; a checksum
+mismatch fails the transfer instead of falling back to the relay; and
+direct transfers work over plain HTTP (TLS closes the sniffing route
+described below, when it's turned on); and the pass carries `holders`, all
+of the destination's addresses (reported in its `/api/health`), not one
+`holder`, because a machine with wired and Wi-Fi connections can fetch from
+either (seen on `nas` in testing). `LANHUB_DIRECT_TRANSFERS=false` on
+the hub turns them off.
 
 ## Why
 

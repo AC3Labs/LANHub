@@ -190,6 +190,8 @@ type fakeAgent struct {
 	activityCalls int
 	srv      *httptest.Server
 	token    string
+
+	direct *fakeDirect // nil: an agent older than 1.3.0 (no fetches)
 }
 
 func newFakeAgent(t *testing.T, token string) *fakeAgent {
@@ -200,6 +202,9 @@ func newFakeAgent(t *testing.T, token string) *fakeAgent {
 }
 
 func (a *fakeAgent) serve(w http.ResponseWriter, r *http.Request) {
+	if a.direct != nil && a.serveDirect(w, r) {
+		return
+	}
 	if r.Header.Get("Authorization") != "Bearer "+a.token {
 		w.WriteHeader(401)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Invalid or missing agent token."})
@@ -214,6 +219,10 @@ func (a *fakeAgent) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.URL.Path {
 	case "/api/health":
+		if a.direct != nil {
+			json.NewEncoder(w).Encode(map[string]any{"hostname": "fake", "os": "linux", "version": "1.3.0", "features": []string{"range", "fetch"}})
+			return
+		}
 		json.NewEncoder(w).Encode(map[string]any{"hostname": "fake", "os": "linux", "version": "1.2.0", "features": []string{"range"}})
 	case "/api/drives":
 		json.NewEncoder(w).Encode(map[string]any{"drives": []Drive{{Path: "/", Label: "/", Free: 10, Total: 20}, {Path: "/home/me", Label: "/home/me", Free: 10, Total: 20}}})

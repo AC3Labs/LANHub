@@ -214,6 +214,7 @@ func (app *App) routes() http.Handler {
 	mux.Handle("GET /activity", auth(app.activity))
 	mux.Handle("GET /agents", auth(app.agents))
 	mux.Handle("GET /agents/{id}/log", auth(app.agentLog))
+	mux.Handle("GET /api/agents/{id}/status", auth(app.apiAgentStatus))
 	mux.Handle("GET /sync-rules", auth(app.syncRules))
 	mux.Handle("POST /sync-rules", auth(app.saveSyncRule))
 	mux.Handle("POST /sync-rules/{id}", auth(app.saveSyncRule))

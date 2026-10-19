@@ -37,6 +37,9 @@ func walkSearch(start, query string, maxDepth, maxResults int, timeoutSec float6
 		var subdirs []string
 		for _, c := range children {
 			name := c.Name()
+			if isPartialName(name) {
+				continue
+			}
 			full := filepath.Join(dir, name)
 
 			if strings.Contains(strings.ToLower(name), queryLower) {

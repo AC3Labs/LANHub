@@ -48,7 +48,9 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 		"os":       runtime.GOOS,
 		"version":  agentVersion,
 		// What this agent can do beyond the 1.1.0 API, so a hub can check.
-		"features": []string{"range"},
+		"features": []string{"range", "fetch"},
+		// Where a direct transfer from this machine may come from.
+		"addresses": localAddresses(),
 	})
 }
 
@@ -100,6 +102,9 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 
 	entries := make([]Entry, 0, len(children))
 	for _, c := range children {
+		if isPartialName(c.Name()) {
+			continue
+		}
 		entries = append(entries, toEntry(filepath.Join(dir, c.Name())))
 	}
 

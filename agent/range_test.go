@@ -88,10 +88,10 @@ func TestPreviewOfAnImageSupportsRange(t *testing.T) {
 	}
 }
 
-func TestHealthAdvertisesRangeSupport(t *testing.T) {
+func TestHealthAdvertisesRangeAndFetchSupport(t *testing.T) {
 	rec := httptest.NewRecorder()
 	handleHealth(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
-	if body := rec.Body.String(); !contains(body, `"features":["range"]`) || !contains(body, `"version":"1.2.0"`) {
+	if body := rec.Body.String(); !contains(body, `"features":["range","fetch"]`) || !contains(body, `"version":"1.3.0"`) {
 		t.Fatalf("health: %s", body)
 	}
 }

@@ -213,25 +213,11 @@ type agentStats struct {
 	Active                   int
 }
 
+// agents renders straight from the database; each card then asks
+// /api/agents/{id}/status for its live state, so one slow or asleep
+// machine doesn't hold up the whole page.
 func (app *App) agents(w http.ResponseWriter, r *http.Request) {
 	machines, _ := app.store.AccessibleMachines(userFrom(r).ID, "sort")
-	// Ping every agent at once and record its status, like Agents\Index::refresh().
-	forEachMachine(machines, func(m *Machine) {
-		ag, err := app.store.Agent(m)
-		online := false
-		if err == nil {
-			_, err = ag.Health(r.Context())
-			online = err == nil
-		}
-		app.store.SetMachineStatus(m.ID, online)
-		if online {
-			m.Status = "online"
-			now := time.Now().UTC()
-			m.LastSeenAt = &now
-		} else {
-			m.Status = "offline"
-		}
-	})
 
 	stats := map[int64]*agentStats{}
 	ids := []string{}
@@ -294,6 +280,26 @@ func (app *App) agents(w http.ResponseWriter, r *http.Request) {
 		cards = append(cards, card{m, stats[m.ID]})
 	}
 	app.render(w, r, http.StatusOK, "agents", "Agents", map[string]any{"Cards": cards})
+}
+
+// apiAgentStatus pings one agent and records the result, like
+// Agents\Index::refresh() did for all of them at once.
+func (app *App) apiAgentStatus(w http.ResponseWriter, r *http.Request) {
+	m, ag, ok := app.machineFor(w, r, "read_only")
+	if !ok {
+		return
+	}
+	health, err := ag.Health(r.Context())
+	online := err == nil
+	app.store.SetMachineStatus(m.ID, online)
+	out := map[string]any{"status": "offline", "last_seen": ""}
+	if online {
+		out = map[string]any{"status": "online", "last_seen": ago(time.Now().UTC()),
+			"version": health.Version, "direct": health.Has("fetch")}
+	} else if m.LastSeenAt != nil {
+		out["last_seen"] = ago(m.LastSeenAt)
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 type logRow struct {

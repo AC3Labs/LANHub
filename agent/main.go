@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const agentVersion = "1.2.0"
+const agentVersion = "1.3.0"
 
 var logFilePath string
 
@@ -87,6 +87,14 @@ func setup() (*Config, *http.Server, error) {
 	mux.HandleFunc("GET /api/transfers/{id}", handleGetTransfer(queue))
 	mux.HandleFunc("GET /api/transfers", handleListTransfers(queue))
 	mux.HandleFunc("GET /api/activity", handleActivity)
+	mux.HandleFunc("GET /api/hash", handleHash)
+	mux.HandleFunc("GET /api/pass-download", handlePassDownload(cfg))
+	mux.HandleFunc("POST /api/passes/retire", handleRetirePass)
+	mux.HandleFunc("POST /api/fetches", handleCreateFetch)
+	mux.HandleFunc("GET /api/fetches/{id}", handleGetFetch)
+	mux.HandleFunc("POST /api/fetches/{id}/pass", handleRenewFetchPass)
+	mux.HandleFunc("POST /api/fetches/{id}/commit", handleCommitFetch)
+	mux.HandleFunc("POST /api/fetches/{id}/abort", handleAbortFetch)
 
 	handler := loggingMiddleware(authMiddleware(cfg.Token, mux))
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
@@ -119,6 +127,12 @@ func authMiddleware(token string, next http.Handler) http.Handler {
 	expected := "Bearer " + token
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Another agent fetching a file holds a hub-signed pass instead of
+		// this agent's token; handlePassDownload checks it.
+		if r.URL.Path == "/api/pass-download" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.Header.Get("Authorization") != expected {
 			writeError(w, 401, "Invalid or missing agent token.")
 			return

@@ -139,6 +139,25 @@ const FILE_ICONS = {
     file: ['text-stone-400', 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
 };
 
+// One card on the Agents page: shown at once from the database, then
+// filled in when this machine's agent answers (or doesn't).
+function agentCard(id, lastSeen) {
+    return {
+        status: 'checking', lastSeen: lastSeen || '', version: '', direct: false,
+        async init() {
+            try {
+                const r = await api('GET', '/api/agents/' + id + '/status');
+                this.status = r.status;
+                this.lastSeen = r.last_seen || this.lastSeen;
+                this.version = r.version || '';
+                this.direct = !!r.direct;
+            } catch (e) {
+                this.status = 'offline';
+            }
+        },
+    };
+}
+
 function fileGroup(type, name) {
     if (type === 'dir' || type === 'drive') return 'folder';
     const ext = (String(name).split('.').pop() || '').toLowerCase();

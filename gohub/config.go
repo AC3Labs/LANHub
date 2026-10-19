@@ -18,6 +18,7 @@ type Config struct {
 	NtfyTopic string // empty = no push alerts
 	AppURL    string // used in invitation links when set
 	Version   string
+	DirectOff bool // LANHUB_DIRECT_TRANSFERS=false: always relay through the hub
 
 	MediaURL        string // LANHub Media service, e.g. http://192.168.0.70:8960
 	MediaSecret     string // shared with it
@@ -64,6 +65,7 @@ func loadConfig() Config {
 		return def
 	}
 	sched, _ := strconv.ParseBool(get("LANHUB_SCHEDULER", "false"))
+	direct, _ := strconv.ParseBool(get("LANHUB_DIRECT_TRANSFERS", "true"))
 	listen := get("LANHUB_LISTEN", "")
 	if listen == "" {
 		listen = ":" + get("PORT", "8000") // the name the PHP hub's compose file used
@@ -77,6 +79,7 @@ func loadConfig() Config {
 		NtfyTopic: get("NTFY_TOPIC", ""),
 		AppURL:    strings.TrimRight(get("APP_URL", ""), "/"),
 		Version:   hubVersion,
+		DirectOff: !direct,
 
 		MediaURL:        get("MEDIA_URL", ""),
 		MediaSecret:     get("MEDIA_SECRET", ""),
