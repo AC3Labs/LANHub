@@ -1,14 +1,14 @@
 services:
   hub:
     # Prebuilt and published by .github/workflows/publish-image.yml on
-    # every push to main — this file works standalone, on any
+    # every push to main. This file works standalone on any
     # docker-compose-driven platform (Dokploy, Portainer, Coolify, plain
-    # `docker compose up`), with no repo checkout and no separate .env
-    # file needed. If you're working from a full clone and want to build
-    # your own image instead (e.g. testing a local change), swap this
-    # line for `build: ./hub`.
+    # `docker compose up`), with no repo checkout and no .env file. Working
+    # from a full clone and want to build your own? Swap this line for
+    # `build: ./gohub`.
     image: ghcr.io/ac3labs/lanhub:latest
     restart: unless-stopped
+    read_only: true
 
     # Nothing in this file needs editing. Start it, then open
     # http://<this-server's-IP>:8949 in a browser.
@@ -20,34 +20,55 @@ services:
       - "8949:8000"
 
     environment:
-      # Nothing here needs changing. LANHub works out its own address from
-      # how you reach it (IP, hostname, port, or a domain through a reverse
-      # proxy). The commented-out lines are optional extras.
+      # Health checks, offline alerts and sync rules.
+      LANHUB_SCHEDULER: "true"
+      # Where LANHub Media is, and where it reaches the hub back. These are
+      # the service names below; leave them as they are.
+      MEDIA_URL: http://media:8960
+      MEDIA_SOURCE_BASE: http://hub:8000
+      MEDIA_SECRET_FILE: /media-key/secret
 
+      # Optional extras:
       # Pin the address used in links inside emails (invites, password
-      # resets). Normally not needed: it's recorded automatically during
-      # first-run setup and can be changed later on the Settings page.
+      # resets). Normally not needed: it's recorded during first-run setup
+      # and can be changed later on the Settings page.
       # APP_URL: https://lanhub.example.com
-
       # Pin a specific encryption key. If left out, one is generated on
-      # first start and saved in the hub_db volume, so it survives restarts
-      # and updates. Only set this to move an existing database to a new
-      # container from scratch.
+      # first start and saved in the hub_data volume. Only set this to move
+      # an existing database to a new container from scratch.
       # APP_KEY: "base64:..."
-
-      # The port LANHub listens on inside the container. Leave it alone —
-      # to change the port you browse to, change the left-hand number
-      # under `ports:` above instead. (Only platforms that route to a
-      # specific container-internal port ever need this changed.)
-      PORT: "8000"
+      # Push a notification to ntfy.sh when a machine goes offline.
+      # NTFY_TOPIC: lanhub-alerts-something-hard-to-guess
 
     volumes:
-      # The only thing that needs to persist — your database (and the
-      # auto-generated APP_KEY above, if you didn't set your own).
-      # Deliberately NOT the whole database/ directory — that would hide
-      # the image's own database/migrations/ folder on every update and
-      # new migrations would silently never run.
-      - hub_db:/var/www/html/storage/db
+      # Your database and the generated encryption key. Back this up.
+      - hub_data:/data
+      # A secret the hub creates and LANHub Media reads.
+      - media_key:/media-key
+
+  # LANHub Media lets the Explorer preview nearly any video by repackaging or
+  # converting it on the fly. Optional: delete this service (and MEDIA_URL
+  # above) and previews still play what the browser handles itself.
+  media:
+    image: ghcr.io/ac3labs/lanhub-media:latest
+    restart: unless-stopped
+    read_only: true
+    depends_on: [hub]
+    environment:
+      MEDIA_SECRET_FILE: /media-key/secret
+    volumes:
+      - media_key:/media-key:ro
+    tmpfs:
+      - /tmp
+    # Converting on an Intel or AMD graphics chip is much lighter than on the
+    # processor. If your server has one (/dev/dri exists), uncomment these
+    # lines and set the number to the server's "render" group
+    # (`getent group render | cut -d: -f3`).
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # group_add:
+    #   - "110"
 
 volumes:
-  hub_db:
+  hub_data:
+  media_key:

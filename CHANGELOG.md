@@ -3,6 +3,25 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.11.0.0] - 2026-10-18
+
+### Added
+- A brand-new install of the Go hub works from nothing: on first start it
+  creates the database, an encryption key (kept beside the database) and
+  the secret LANHub Media uses, then opens the setup screen. Nothing to
+  generate or paste in.
+- `docker-compose.yml` now runs the Go hub plus LANHub Media, which picks up
+  that secret by itself. Graphics-chip video conversion is two lines to
+  uncomment. `PORT` works as before.
+
+### Fixed
+- Windows agent installer: it failed to run at all in Windows PowerShell
+  5.1 (the version built into Windows), because of non-ASCII dashes in the
+  script. It's plain ASCII now.
+- Windows agent installer: run without Administrator it half-installed and
+  then failed with "Access is denied"; it now stops at once and says how
+  to run it as Administrator.
+
 ## [0.10.0.1] - 2026-10-18
 
 ### Changed

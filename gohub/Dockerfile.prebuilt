@@ -3,7 +3,9 @@
 FROM scratch
 COPY ca-certificates.crt /etc/ssl/certs/
 COPY lanhub-hub /lanhub-hub
+COPY --chown=65532:65532 empty /data
+COPY --chown=65532:65532 empty /media-key
 USER 65532:65532
-ENV LANHUB_DB=/data/database.sqlite LANHUB_ENV_FILE=/app/hub.env LANHUB_LISTEN=:8000
+ENV LANHUB_DB=/data/database.sqlite LANHUB_ENV_FILE=/app/hub.env
 EXPOSE 8000
 ENTRYPOINT ["/lanhub-hub"]

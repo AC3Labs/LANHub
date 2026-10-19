@@ -16,6 +16,9 @@ import (
 
 func main() {
 	cfg := loadConfig()
+	if err := cfg.fillSecrets(); err != nil {
+		log.Fatal(err)
+	}
 	enc, err := NewEncrypter(cfg.AppKey)
 	if err != nil {
 		log.Fatalf("APP_KEY: %v", err)

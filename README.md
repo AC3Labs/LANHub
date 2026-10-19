@@ -33,8 +33,12 @@ See `docs/AGENT_API.md` for the full hub↔agent wire contract.
 
 ## Architecture
 
-- **`hub/`** — a Laravel + Livewire web app. This is what you open in a
-  browser. Runs in Docker.
+- **`gohub/`** — the hub: a single Go program (about 15 MB image) that
+  serves the web app you open in a browser. Runs in Docker.
+- **`gohub/cmd/lanhub-media`** — LANHub Media, an optional second container
+  (ffmpeg) that lets the Explorer preview nearly any video.
+- **`hub/`** — the previous hub (Laravel + Livewire), kept for reference
+  and for upgrading old installs. The Go hub reads its database unchanged.
 - **`agent/`** — a small Go service, one per machine you want to browse.
   Compiles to a single static binary (no runtime to install) and runs
   natively (not in Docker) so it has direct access to that machine's
@@ -81,15 +85,15 @@ recovery codes it gives you in case you lose your phone. Later, set up
 outgoing email under **Settings** so you can invite other people.
 
 Everything else is automatic. The database and encryption key are
-created on first start and kept in the `hub_db` volume, so they survive
+created on first start and kept in the `hub_data` volume, so they survive
 restarts and updates. LANHub works out its own address from however you
 reach it: an IP, a hostname, a different port, or a domain with HTTPS
 through a reverse proxy. You don't have to configure it anywhere.
 
 (The setup screen only appears on a brand-new install. To add more people
 later, use the **Users** page; people can't sign themselves up. To script
-this step instead, run `docker compose exec -u www-data hub php artisan
-lanhub:create-admin`.)
+this step instead, run `docker compose exec hub /lanhub-hub create-admin -name NAME -email
+EMAIL -password PASSWORD`.)
 
 **If it doesn't start:**
 
@@ -123,21 +127,20 @@ sudo install/install-linux.sh        # or install/install-windows.ps1 as Adminis
 - Two-factor login is required for every user on every login; there is no
   "remember this device" bypass. Each user picks an authenticator app or
   emailed codes. If someone loses their phone and their recovery codes, an
-  admin can run `docker compose exec -u www-data hub php artisan
-  lanhub:reset-authenticator their@email` to switch them back to emailed
+  admin can run `docker compose exec hub /lanhub-hub reset-authenticator
+  their@email` to switch them back to emailed
   codes.
 
 ## Development
 
 ```
-cd hub
-composer install
-npm install && npm run build   # or `npm run dev` while working on frontend
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan test
+cd gohub
+go test ./...
+LANHUB_DB=./dev.sqlite go run .   # first start creates the database and app.key beside it
 ```
+
+Styles are Tailwind, built from the `hub/` config into
+`gohub/web/static/app.css`.
 
 ## License
 

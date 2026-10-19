@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -20,6 +22,28 @@ type Config struct {
 	MediaURL        string // LANHub Media service, e.g. http://192.168.0.70:8960
 	MediaSecret     string // shared with it
 	MediaSourceBase string // this hub's address as the media service reaches it
+	MediaSecretFile string // where to keep a generated MEDIA_SECRET (shared volume)
+}
+
+// fillSecrets generates what a new install needs and didn't set: APP_KEY
+// is kept next to the database, MEDIA_SECRET in MEDIA_SECRET_FILE (a
+// volume LANHub Media reads too). Set values always win.
+func (c *Config) fillSecrets() error {
+	if c.AppKey == "" {
+		k, err := secretFile(filepath.Join(filepath.Dir(c.DBPath), "app.key"), newAppKey)
+		if err != nil {
+			return fmt.Errorf("APP_KEY isn't set and one couldn't be saved: %w", err)
+		}
+		c.AppKey = k
+	}
+	if c.MediaSecret == "" && c.MediaSecretFile != "" && c.MediaURL != "" {
+		s, err := secretFile(c.MediaSecretFile, newMediaSecret)
+		if err != nil {
+			return fmt.Errorf("MEDIA_SECRET isn't set and one couldn't be saved: %w", err)
+		}
+		c.MediaSecret = s
+	}
+	return nil
 }
 
 // loadConfig reads the same hub.env the PHP hub uses (APP_KEY, NTFY_TOPIC,
@@ -40,11 +64,15 @@ func loadConfig() Config {
 		return def
 	}
 	sched, _ := strconv.ParseBool(get("LANHUB_SCHEDULER", "false"))
+	listen := get("LANHUB_LISTEN", "")
+	if listen == "" {
+		listen = ":" + get("PORT", "8000") // the name the PHP hub's compose file used
+	}
 	return Config{
 		AppKey:    get("APP_KEY", ""),
 		AppName:   get("APP_NAME", "LANHub"),
 		DBPath:    get("LANHUB_DB", "/data/database.sqlite"),
-		Listen:    get("LANHUB_LISTEN", ":8000"),
+		Listen:    listen,
 		Scheduler: sched,
 		NtfyTopic: get("NTFY_TOPIC", ""),
 		AppURL:    strings.TrimRight(get("APP_URL", ""), "/"),
@@ -52,6 +80,7 @@ func loadConfig() Config {
 
 		MediaURL:        get("MEDIA_URL", ""),
 		MediaSecret:     get("MEDIA_SECRET", ""),
+		MediaSecretFile: get("MEDIA_SECRET_FILE", ""),
 		MediaSourceBase: get("MEDIA_SOURCE_BASE", ""),
 	}
 }

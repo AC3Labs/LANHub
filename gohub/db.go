@@ -30,6 +30,9 @@ func openStore(path string, enc *Encrypter) (*Store, error) {
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
+	if err := createSchema(db); err != nil {
+		return nil, err
+	}
 	var users int
 	if err := db.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','machines','machine_user','relay_transfers','sync_rules','settings')`).Scan(&users); err != nil || users != 6 {
 		return nil, fmt.Errorf("%s doesn't look like a LANHub database (missing tables)", path)

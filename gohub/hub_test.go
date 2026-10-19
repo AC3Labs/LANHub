@@ -11,7 +11,6 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -34,7 +33,7 @@ func newTestHub(t *testing.T) *testHub {
 	t.Helper()
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "database.sqlite")
-	schema, err := os.ReadFile("testdata/schema.sql")
+	schema, err := []byte(schemaSQL), error(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-# Installs the LANHub agent as a native Windows Service — no NSSM or any
+# Installs the LANHub agent as a native Windows Service - no NSSM or any
 # other third-party service wrapper. The agent registers and manages
 # itself (`lanhub-agent.exe install`), which is more robust than
 # depending on an extra tool: NSSM itself got blocked outright by an
@@ -13,6 +13,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    throw "Run this as Administrator: right-click Start, choose Terminal (Admin), and run it again there."
+}
+
 $InstallDir = "C:\LANHub-Agent"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -21,7 +26,7 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 $ConfigWasFresh = $false
 if (-not (Test-Path "$InstallDir\config.json")) {
     Copy-Item "$ScriptDir\..\config.example.json" "$InstallDir\config.json"
-    Write-Host "Wrote default config to $InstallDir\config.json — edit the token before starting the service."
+    Write-Host "Wrote default config to $InstallDir\config.json - edit the token before starting the service."
     $ConfigWasFresh = $true
 }
 
@@ -34,9 +39,9 @@ if ($Tls) {
     if (-not (Test-Path $CertFile)) {
         if (Get-Command openssl -ErrorAction SilentlyContinue) {
             & openssl req -x509 -newkey rsa:2048 -nodes -keyout $KeyFile -out $CertFile -days 3650 -subj "/CN=$env:COMPUTERNAME"
-            Write-Host "Generated a self-signed TLS cert at $CertFile (valid 10 years). This is for a trusted LAN — it will not validate against a public CA."
+            Write-Host "Generated a self-signed TLS cert at $CertFile (valid 10 years). This is for a trusted LAN - it will not validate against a public CA."
         } else {
-            Write-Warning "openssl.exe not found (e.g. 'choco install openssl') — install it and re-run with -Tls, or generate cert_file/key_file yourself and set them in config.json."
+            Write-Warning "openssl.exe not found (e.g. 'choco install openssl') - install it and re-run with -Tls, or generate cert_file/key_file yourself and set them in config.json."
         }
     }
 
@@ -46,25 +51,25 @@ if ($Tls) {
         $configJson | Add-Member -NotePropertyName key_file -NotePropertyValue $KeyFile -Force
         $configJson | ConvertTo-Json -Depth 10 | Set-Content "$InstallDir\config.json"
     } elseif (Test-Path $CertFile) {
-        Write-Host "config.json already existed — set `"cert_file`": `"$CertFile`" and `"key_file`": `"$KeyFile`" in it yourself to enable HTTPS."
+        Write-Host "config.json already existed - set `"cert_file`": `"$CertFile`" and `"key_file`": `"$KeyFile`" in it yourself to enable HTTPS."
     }
 }
 
 # --- Windows Defender hardening -----------------------------------------
 # A real, repeated failure mode on actual hardware: Defender's real-time
 # protection getting into a bad state around this process, with zero error
-# output — see README's "Windows troubleshooting" section. An exclusion
+# output - see README's "Windows troubleshooting" section. An exclusion
 # up front avoids ever hitting it in the first place, which is much
 # cheaper than debugging a silently-hanging agent later.
 try {
     $tamperStatus = Get-MpComputerStatus -ErrorAction Stop
     if ($tamperStatus.IsTamperProtected) {
-        Write-Warning "Windows Defender Tamper Protection is ON. The exclusion this script just added may not stick (silently reverts under Tamper Protection). If the agent later hangs at startup with zero output, this is almost certainly why — see README's Windows troubleshooting section. Add the exclusion manually via Windows Security > Virus & threat protection settings instead."
+        Write-Warning "Windows Defender Tamper Protection is ON. The exclusion this script just added may not stick (silently reverts under Tamper Protection). If the agent later hangs at startup with zero output, this is almost certainly why - see README's Windows troubleshooting section. Add the exclusion manually via Windows Security > Virus & threat protection settings instead."
     }
     Add-MpPreference -ExclusionPath $InstallDir -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionProcess "lanhub-agent.exe" -ErrorAction SilentlyContinue
 } catch {
-    Write-Warning "Could not check/set Windows Defender exclusions (Get-MpComputerStatus/Add-MpPreference failed) — this is fine if Defender isn't the active AV on this machine, otherwise add an exclusion for $InstallDir manually if the agent hangs at startup."
+    Write-Warning "Could not check/set Windows Defender exclusions (Get-MpComputerStatus/Add-MpPreference failed) - this is fine if Defender isn't the active AV on this machine, otherwise add an exclusion for $InstallDir manually if the agent hangs at startup."
 }
 
 New-NetFirewallRule -DisplayName "LANHub Agent" -Direction Inbound -Protocol TCP -LocalPort 8765 -Action Allow -Profile Any -ErrorAction SilentlyContinue | Out-Null
@@ -88,7 +93,7 @@ Push-Location $InstallDir
 Pop-Location
 
 Write-Host ""
-Write-Host "Installed as a native Windows Service (LANHubAgent) — auto-starts at boot, restarts itself on any exit."
+Write-Host "Installed as a native Windows Service (LANHubAgent) - auto-starts at boot, restarts itself on any exit."
 Write-Host "Edit $InstallDir\config.json with a real token, then: Restart-Service LANHubAgent"
 Write-Host "Check status any time with: Get-Service LANHubAgent"
 Write-Host "Uninstall with: $InstallDir\lanhub-agent.exe uninstall (after Stop-Service LANHubAgent)"

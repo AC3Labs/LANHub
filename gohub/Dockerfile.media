@@ -3,7 +3,8 @@
 # lanhub-media service. Build context: dist-media/ (see build-media.sh).
 FROM alpine:3.22
 RUN apk add --no-cache ffmpeg libva-intel-driver intel-media-driver ca-certificates \
-    && adduser -D -H -u 65532 lanhub
+    && adduser -D -H -u 65532 lanhub \
+    && mkdir /media-key && chown 65532:65532 /media-key
 COPY lanhub-media /usr/local/bin/lanhub-media
 USER 65532
 ENV MEDIA_LISTEN=:8960

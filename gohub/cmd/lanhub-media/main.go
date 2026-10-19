@@ -47,6 +47,22 @@ type config struct {
 	threads       int
 }
 
+// waitForSecret reads the secret the hub writes on its first start into a
+// volume both containers share. On a new install the two start together, so
+// give the hub a moment to create it.
+func waitForSecret(path string, wait time.Duration) string {
+	deadline := time.Now().Add(wait)
+	for {
+		if b, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(b))) >= 16 {
+			return strings.TrimSpace(string(b))
+		}
+		if time.Now().After(deadline) {
+			return ""
+		}
+		time.Sleep(time.Second)
+	}
+}
+
 func getenv(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
@@ -77,8 +93,11 @@ func main() {
 		maxHeight:     atoi(os.Getenv("MEDIA_MAX_HEIGHT"), 720),
 		threads:       atoi(os.Getenv("MEDIA_THREADS"), 4),
 	}
+	if cfg.secret == "" && os.Getenv("MEDIA_SECRET_FILE") != "" {
+		cfg.secret = waitForSecret(os.Getenv("MEDIA_SECRET_FILE"), 2*time.Minute)
+	}
 	if len(cfg.secret) < 16 {
-		log.Fatal("MEDIA_SECRET must be set (16+ characters) and shared with the hub")
+		log.Fatal("MEDIA_SECRET must be set (16+ characters) and shared with the hub, or MEDIA_SECRET_FILE must point at the file the hub creates")
 	}
 	cfg.vaapiDevice = detectVAAPI(getenv("MEDIA_HWACCEL", "auto"))
 	s := &server{cfg: cfg, transcodes: make(chan struct{}, cfg.maxTranscodes), remuxes: make(chan struct{}, cfg.maxRemux)}
