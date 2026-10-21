@@ -19,12 +19,29 @@ import (
 	"time"
 )
 
-const agentVersion = "1.3.0"
+const agentVersion = "1.4.0"
 
 var logFilePath string
 
 func main() {
 	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "version", "--version":
+			// Installers and self-update check a new program runs here.
+			fmt.Println(agentVersion)
+			return
+		case "configure":
+			if err := runConfigure(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			return
+		case "has-token":
+			if !hasToken() {
+				os.Exit(1)
+			}
+			return
+		}
 		if handled := handleServiceCommand(os.Args[1]); handled {
 			return
 		}
@@ -95,6 +112,7 @@ func setup() (*Config, *http.Server, error) {
 	mux.HandleFunc("POST /api/fetches/{id}/pass", handleRenewFetchPass)
 	mux.HandleFunc("POST /api/fetches/{id}/commit", handleCommitFetch)
 	mux.HandleFunc("POST /api/fetches/{id}/abort", handleAbortFetch)
+	mux.HandleFunc("POST /api/self-update", handleSelfUpdate)
 
 	handler := loggingMiddleware(authMiddleware(cfg.Token, mux))
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))

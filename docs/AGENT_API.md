@@ -24,11 +24,12 @@ same HTTP contract so the hub's code never branches on OS.
 ### `GET /api/health`
 Returns liveness + identity info, polled by the hub to show online/offline status.
 ```json
-{ "hostname": "desktop-01", "os": "windows", "version": "1.3.0", "features": ["range", "fetch"] }
+{ "hostname": "desktop-01", "os": "windows", "arch": "amd64", "version": "1.4.0", "features": ["range", "fetch", "self-update"] }
 ```
 `features` lists what the agent can do beyond the 1.1.0 API: `range` (1.2.0,
-Range requests on downloads and previews) and `fetch` (1.3.0, direct
-transfers). Older agents send no `features`. 1.3.0 also sends
+Range requests on downloads and previews), `fetch` (1.3.0, direct
+transfers) and `self-update` (1.4.0, `POST /api/self-update`). `arch` is
+new in 1.4.0. Older agents send no `features`. 1.3.0 also sends
 `addresses`, the machine's own IP addresses (not loopback), which the hub
 puts in a direct-transfer pass as the addresses the fetch may come from.
 
@@ -200,3 +201,33 @@ json = `{v: 1, job, file, path, size, mtime, holders, expires, nonce}`.
 The hub commits only after the destination's `sha256` matches the source's
 `/api/hash`, and deletes the source of a move only after every file is
 committed.
+
+## Updates (agent 1.4.0, feature `self-update`)
+
+### `POST /api/self-update`
+The body is the new agent program for this machine's OS and architecture.
+Headers:
+
+- `X-LANHub-SHA256`: its SHA-256, hex.
+- `X-LANHub-Version`: its version.
+- `X-LANHub-Signature`: base64 Ed25519 signature, by LANHub's release key, of
+  `"lanhub-agent-update\n" + version + "\n" + os + "/" + arch + "\n" + sha256 + "\n"`.
+
+The agent refuses it unless the signature verifies against the public key
+built into it (403), the version is newer than its own (409) and the body
+matches the checksum (400). It then runs the new program once
+(`lanhub-agent version`) and refuses it (422) if it doesn't start or reports
+another version; on Windows that's usually Smart App Control. Otherwise it
+renames itself to `lanhub-agent(.exe).old`, puts the new program in its
+place, answers `{"ok": true, "from": "1.4.0", "to": "1.5.0"}` and exits,
+so its service manager starts the new one.
+
+The hub sends the build it carries (made and signed by
+`gohub/cmd/agentbundle` when the image is built) and waits for
+`/api/health` to report the new version.
+
+### Command line
+`lanhub-agent version` prints the version. `lanhub-agent configure [--token T]
+[--port N] [--cert F --key F]` writes `config.json` (keeping other settings),
+and `lanhub-agent has-token` exits 0 when it has a token. The installers
+the hub serves use these.

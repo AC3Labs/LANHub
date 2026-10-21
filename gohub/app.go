@@ -34,6 +34,8 @@ type App struct {
 	media mediaConfig
 	plans planCache
 	upd   *updater
+
+	agentBuilds *agentBundle // agent builds to install and push; nil if built without
 }
 
 type netSample struct {
@@ -46,6 +48,7 @@ func newApp(cfg Config, store *Store) (*App, error) {
 		media: mediaConfig{url: cfg.MediaURL, secret: cfg.MediaSecret, sourceBase: cfg.MediaSourceBase},
 		plans: planCache{items: map[string]cachedPlan{}}}
 	app.mailer = &Mailer{store: store, appName: cfg.AppName}
+	app.agentBuilds = loadAgentBundle(agentBuildsFS)
 	app.upd = newUpdater(app)
 	app.relays = newRelayManager(app)
 	if err := app.loadTemplates(); err != nil {
@@ -169,6 +172,10 @@ func (app *App) routes() http.Handler {
 		http.ServeFileFS(w, r, static, "favicon.ico")
 	})
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
+	// Agent installs: public, like the repo they come from.
+	mux.HandleFunc("GET /agent/install.sh", app.agentInstallScript)
+	mux.HandleFunc("GET /agent/install.ps1", app.agentInstallScript)
+	mux.HandleFunc("GET /agent/download/{name}", app.agentDownload)
 
 	guest := func(h handler) http.Handler { return app.withSession(app.csrf(h)) }
 	auth := func(h handler) http.Handler { return app.withSession(app.requireAuth(app.csrf(h))) }
@@ -215,6 +222,7 @@ func (app *App) routes() http.Handler {
 	mux.Handle("GET /agents", auth(app.agents))
 	mux.Handle("GET /agents/{id}/log", auth(app.agentLog))
 	mux.Handle("GET /api/agents/{id}/status", auth(app.apiAgentStatus))
+	mux.Handle("POST /api/agents/{id}/update", admin(app.apiAgentUpdate))
 	mux.Handle("GET /sync-rules", auth(app.syncRules))
 	mux.Handle("POST /sync-rules", auth(app.saveSyncRule))
 	mux.Handle("POST /sync-rules/{id}", auth(app.saveSyncRule))

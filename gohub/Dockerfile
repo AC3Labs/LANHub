@@ -1,9 +1,18 @@
 # LANHub Go hub. Two stages: build a static binary, then ship it alone.
-FROM golang:1.27.1 AS build
-WORKDIR /src
-COPY go.mod go.sum ./
+# Build from the repo's root (the hub carries the agent builds it hands out):
+#   docker build -f gohub/Dockerfile .
+FROM golang:1.27.3 AS build
+WORKDIR /src/gohub
+COPY gohub/go.mod gohub/go.sum ./
 RUN go mod download
-COPY . .
+COPY agent/ /src/agent/
+RUN cd /src/agent && go mod download
+COPY gohub/ ./
+# The agents for every platform, signed with LANHub's release key when the
+# build is given it (the agent_signing_key secret; see cmd/agentbundle).
+# Without it they're bundled unsigned: installable, but not pushed as updates.
+RUN --mount=type=secret,id=agent_signing_key,required=false \
+    LANHUB_AGENT_SIGNING_KEY_FILE=/run/secrets/agent_signing_key go run ./cmd/agentbundle -agent /src/agent -out agentbuilds
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /lanhub-hub . && mkdir -p /empty
 
 FROM scratch

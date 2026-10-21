@@ -279,7 +279,11 @@ func (app *App) agents(w http.ResponseWriter, r *http.Request) {
 	for _, m := range machines {
 		cards = append(cards, card{m, stats[m.ID]})
 	}
-	app.render(w, r, http.StatusOK, "agents", "Agents", map[string]any{"Cards": cards})
+	agentVersion := ""
+	if app.agentBuilds != nil {
+		agentVersion = app.agentBuilds.Version
+	}
+	app.render(w, r, http.StatusOK, "agents", "Agents", map[string]any{"Cards": cards, "AgentVersion": agentVersion})
 }
 
 // apiAgentStatus pings one agent and records the result, like
@@ -295,7 +299,10 @@ func (app *App) apiAgentStatus(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{"status": "offline", "last_seen": ""}
 	if online {
 		out = map[string]any{"status": "online", "last_seen": ago(time.Now().UTC()),
-			"version": health.Version, "direct": health.Has("fetch")}
+			"version": health.Version, "direct": health.Has("fetch"), "os": health.OS}
+		if to, canPush, why := app.agentUpdateInfo(health); to != "" {
+			out["update_to"], out["can_push"], out["update_note"] = to, canPush, why
+		}
 	} else if m.LastSeenAt != nil {
 		out["last_seen"] = ago(m.LastSeenAt)
 	}

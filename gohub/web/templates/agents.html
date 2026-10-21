@@ -6,12 +6,50 @@
                 <h2 class="font-semibold text-xl text-stone-800">Agents</h2>
                 <p class="text-sm text-stone-500 mt-1">Live health and transfer throughput for every machine's agent.</p>
             </div>
-            <a href="/agents" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                Refresh
-            </a>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                {{if and .User.IsAdmin .Data.AgentVersion}}
+                <button type="button" x-data="{count: 0}" @agent-behind.window="count++" @agent-current.window="count = Math.max(0, count - 1)" x-show="count > 0" x-cloak @click="$dispatch('update-all-agents')" class="inline-flex items-center gap-2 px-4 py-2 bg-tan-500 hover:bg-tan-600 text-black text-sm font-medium rounded-lg shadow-soft transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>
+                    <span x-text="'Update all agents (' + count + ')'"></span>
+                </button>
+                {{end}}
+                {{if .Data.AgentVersion}}
+                <button type="button" @click="$dispatch('show-agent-install')" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 hover:bg-gray-100 text-black text-sm font-medium rounded-lg shadow-soft transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                    Install an agent
+                </button>
+                {{end}}
+                <a href="/agents" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 hover:bg-gray-100 text-black text-sm font-medium rounded-lg shadow-soft transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh
+                </a>
+            </div>
         </div>
     </div>
+    {{if .Data.AgentVersion}}
+    <div x-data="agentInstall({{json .Data.AgentVersion}})" @show-agent-install.window="open = true" x-show="open" x-cloak class="max-w-[1600px] mx-auto pt-6 px-4 sm:px-6 lg:px-8">
+        <div class="rounded-xl bg-paper shadow-soft border border-stone-200 p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="font-semibold text-stone-800">Install or update an agent (<span x-text="version"></span>)</h3>
+                    <p class="text-sm text-stone-500 mt-1">Run one line on the machine. Use the token you gave it under <a href="/dashboard" class="text-tan-600 underline">Add Machine</a>. To update an agent that's already set up, leave the token out: it keeps its settings.</p>
+                </div>
+                <button type="button" @click="open = false" class="text-stone-400 hover:text-stone-600" aria-label="Close">&times;</button>
+            </div>
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                    <p class="text-xs font-medium text-stone-600 mb-1">Linux (systemd), in a terminal</p>
+                    <div class="flex gap-2"><code class="flex-1 block text-xs font-mono bg-stone-50 border border-stone-200 rounded-md px-3 py-2 break-all" x-text="linux"></code><button type="button" @click="copy(linux)" class="text-xs px-3 rounded-md border border-stone-200 bg-white hover:bg-gray-100">Copy</button></div>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-stone-600 mb-1">Windows, in Terminal (Admin)</p>
+                    <div class="flex gap-2"><code class="flex-1 block text-xs font-mono bg-stone-50 border border-stone-200 rounded-md px-3 py-2 break-all" x-text="windows"></code><button type="button" @click="copy(windows)" class="text-xs px-3 rounded-md border border-stone-200 bg-white hover:bg-gray-100">Copy</button></div>
+                </div>
+            </div>
+            <p class="text-xs text-stone-400 mt-3">Agents 1.4.0 and later update from this page after that; older ones need this once. On Windows with Smart App Control on, Windows may block a new agent build; the installer then leaves the current agent as it is.</p>
+        </div>
+    </div>
+    {{end}}
     <div class="max-w-[1600px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {{if not .Data.Cards}}
             <div class="rounded-xl border border-dashed border-stone-300 bg-paper p-12 text-center">
@@ -20,7 +58,7 @@
         {{else}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {{range .Data.Cards}}{{$m := .M}}{{$s := .S}}
-            <div x-data="agentCard({{$m.ID}}, {{json (ago $m.LastSeenAt)}})" class="rounded-xl bg-paper shadow-soft border border-stone-200 p-5 flex flex-col gap-4">
+            <div x-data="agentCard({{$m.ID}}, {{json (ago $m.LastSeenAt)}})" @update-all-agents.window="if (updateTo && canPush && !updating) update()" class="rounded-xl bg-paper shadow-soft border border-stone-200 p-5 flex flex-col gap-4">
                 <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white font-semibold" style="background-color: {{color $m.Color}}">{{$m.Initial}}</span>
@@ -39,6 +77,19 @@
                     </span>
                 </div>
                 <p x-show="lastSeen || version" x-cloak class="text-xs text-stone-400 -mt-2"><span x-show="lastSeen" x-text="'Last seen ' + lastSeen"></span><span x-show="lastSeen && version"> · </span><span x-show="version" x-text="'Agent ' + version"></span><span x-show="direct"> · direct transfers</span></p>
+                <div x-show="updateTo" x-cloak class="-mt-2 rounded-lg border border-tan-200 bg-tan-50 px-3 py-2 text-xs text-stone-700 flex flex-col gap-2">
+                    <p><span class="font-medium">Agent <span x-text="updateTo"></span> is available.</span> <span x-show="!canPush" x-text="note"></span></p>
+                    {{if $.User.IsAdmin}}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" x-show="canPush" @click="update()" :disabled="updating" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-tan-500 hover:bg-tan-600 disabled:opacity-60 text-black font-medium">
+                            <svg x-show="updating" class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span x-text="updating ? 'Updating…' : 'Update agent'"></span>
+                        </button>
+                        <button type="button" x-show="!canPush" @click="$dispatch('show-agent-install'); window.scrollTo({top: 0, behavior: 'smooth'})" class="px-3 py-1.5 rounded-md border border-stone-200 bg-white hover:bg-gray-100 text-black font-medium">Show install command</button>
+                    </div>
+                    {{end}}
+                </div>
+                <p x-show="message" x-cloak :class="failed ? 'text-red-600' : 'text-green-700'" class="-mt-2 text-xs" x-text="message"></p>
                 <div class="grid grid-cols-2 gap-3 pt-3 border-t border-stone-100">
                     <div>
                         <p class="text-[10px] uppercase tracking-wide text-stone-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"/></svg>Sent</p>

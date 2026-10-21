@@ -46,9 +46,10 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"hostname": hostname,
 		"os":       runtime.GOOS,
+		"arch":     runtime.GOARCH,
 		"version":  agentVersion,
 		// What this agent can do beyond the 1.1.0 API, so a hub can check.
-		"features": []string{"range", "fetch"},
+		"features": []string{"range", "fetch", "self-update"},
 		// Where a direct transfer from this machine may come from.
 		"addresses": localAddresses(),
 	})

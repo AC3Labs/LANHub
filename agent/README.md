@@ -6,6 +6,13 @@ Windows and Linux. See `../docs/AGENT_API.md` for the API it exposes.
 
 ## Setup
 
+The easy way: add the machine in the hub (**Add Machine**) and run the
+one-line install command it shows. It downloads this agent from your hub,
+sets the token and installs the service. Updates then come from the hub's
+**Agents** page. See the main README.
+
+Without a hub to download from, from a copy of this folder:
+
 1. Copy `config.example.json` to `config.json` and set a long random `token`
    (this must match the token you enter for this machine in the LANHub hub).
 2. Install as a background service:

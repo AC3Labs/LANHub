@@ -184,6 +184,15 @@
                         </div>
                         <input id="agent_token" name="agent_token" x-model="form.token" class="border-stone-300 text-stone-800 focus:border-tan-400 focus:ring-tan-400 rounded-md shadow-sm mt-1 block w-full font-mono text-sm" placeholder="Paste into the agent's config.json" autocomplete="off">
                         <p x-show="form.errors.agent_token" class="text-sm text-red-600 mt-1" x-text="form.errors.agent_token"></p>
+                        {{if $d.CanInstallAgents}}
+                        <div x-show="form.token" x-cloak class="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 space-y-2">
+                            <p>Then install the agent on the machine with one line (it sets this token for you):</p>
+                            <p class="font-medium text-stone-700">Linux (systemd), in a terminal</p>
+                            <code class="block font-mono bg-white border border-stone-200 rounded-md px-2 py-1.5 break-all" x-text="'curl -fsSL ' + location.origin + '/agent/install.sh | sudo bash -s -- --token ' + form.token + (form.port && form.port != 8765 ? ' --port ' + form.port : '') + (form.use_tls ? ' --tls' : '')"></code>
+                            <p class="font-medium text-stone-700">Windows, in Terminal (Admin)</p>
+                            <code class="block font-mono bg-white border border-stone-200 rounded-md px-2 py-1.5 break-all" x-text="'& ([scriptblock]::Create((irm \'' + location.origin + '/agent/install.ps1\'))) -Token \'' + form.token + '\'' + (form.port && form.port != 8765 ? ' -Port ' + form.port : '') + (form.use_tls ? ' -Tls' : '')"></code>
+                        </div>
+                        {{end}}
                     </div>
                     <div class="sm:col-span-2 flex items-center gap-2">
                         <input id="use_tls" name="use_tls" type="checkbox" value="1" x-model="form.use_tls" class="rounded border-stone-300 text-tan-500 focus:ring-tan-400">

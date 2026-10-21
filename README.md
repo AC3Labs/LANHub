@@ -112,22 +112,31 @@ EMAIL -password PASSWORD`.)
 
 ### 2. Install an agent on each machine you want to browse
 
-See `agent/README.md`. Short version: add the machine on the hub's
-Dashboard first (**Add Machine**; it gives you a token), then on that
-machine, from a copy of this repo's `agent/` folder:
+Add the machine on the hub's Dashboard first (**Add Machine**; pick or
+generate a token). The form then shows a one-line command that installs
+the agent with that token; run it on the machine:
 
-- **Linux:** run `sudo install/install-linux.sh` from your normal account
-  (not a root shell, or the agent will run as root). Put the token in
-  `/opt/lanhub-agent/config.json`, then `sudo systemctl start lanhub-agent`.
-- **Windows:** right-click Start, choose **Terminal (Admin)**, and run
-  `powershell -ExecutionPolicy Bypass -File install\install-windows.ps1`.
-  Put the token in `C:\LANHub-Agent\config.json`, then
-  `Restart-Service LANHubAgent`.
+- **Linux (systemd)**, from your normal account (the agent runs as you,
+  not root):
+  `curl -fsSL http://<hub>:8000/agent/install.sh | sudo bash -s -- --token TOKEN`
+- **Windows**, in **Terminal (Admin)** (right-click Start):
+  `& ([scriptblock]::Create((irm 'http://<hub>:8000/agent/install.ps1'))) -Token 'TOKEN'`
+
+Add `--port N`/`-Port N` for a port other than 8765, and `--tls`/`-Tls` for
+HTTPS with a self-signed certificate. The installer downloads the agent from
+your hub, checks it against its SHA-256, and makes sure it runs on the
+machine before replacing anything. The **Agents** page shows the same
+commands under **Install an agent**.
+
+No hub to download from yet? `agent/install/` has the older installers,
+which work from a copy of this repo's `agent/` folder (see
+`agent/README.md`).
 
 On Windows 11 with **Smart App Control** turned on, Windows may refuse to
 start the agent because it isn't code-signed yet ("An Application Control
 policy has blocked this file"). There's no way to allow a single program
-while Smart App Control is on.
+while Smart App Control is on; the installer stops and leaves the agent
+that's already there as it is.
 
 ### Keeping LANHub up to date
 
@@ -147,12 +156,26 @@ the same page.
 Pulling new images still works too, and also refreshes the images' system
 files (certificates, ffmpeg): `docker compose pull && docker compose up -d`.
 
-The hub doesn't update the agents. To update one, run its installer again
-from a fresh copy of this repo's `agent/` folder; it keeps the existing
-`config.json` (and token). On Linux, then run
-`sudo systemctl restart lanhub-agent`. The **Agents** page shows each
-agent's version. Direct transfers need agent 1.3.0 or later on both
-machines.
+#### Updating the agents
+
+Each hub carries the agents that match it, so updating the hub brings new
+agents along. The **Agents** page shows each agent's version, and when one
+is behind, admins get an **Update agent** button (and **Update all
+agents**). The hub sends the agent its new version; the agent checks it,
+runs it once to make sure it starts on that machine, swaps it in and
+restarts, keeping the old one beside it as `lanhub-agent.old`. It's back in
+a few seconds.
+
+Agents only install an update signed with LANHub's release key, which only
+exists in this project's build system: the hub passes on a signature it
+can't make itself. So someone with an agent's token, or a hub of their own,
+can't make your agents run a program of their choosing. Agents also refuse
+to go back to an older version.
+
+Agents older than 1.4.0 can't update themselves yet: run the install
+command once more on each (no token needed; it keeps its settings). After
+that, updates come from the Agents page. Direct transfers need agent 1.3.0
+or later on both machines.
 
 ### Upgrading from 0.9
 
@@ -187,6 +210,13 @@ working; updating them to 1.2.0 makes seeking in big videos faster.
   you don't. See `agent/README.md`.
 - The browser talks to the hub over plain HTTP too, unless you put it
   behind a reverse proxy with HTTPS.
+- Agent updates pushed from the hub must be signed with LANHub's release
+  key (Ed25519; the public half is built into the agent). Builds of your own
+  bundle their agents unsigned, so they can install agents but not push
+  updates, unless you make your own key (see Development).
+- `/agent/install.sh`, `/agent/install.ps1` and `/agent/download/...` need
+  no login, like the public repo they come from; they never contain a
+  token.
 - Two-factor login is required for every user on every login; there is no
   "remember this device" bypass. Each user picks an authenticator app or
   emailed codes. If someone loses their phone and their recovery codes, an
@@ -204,6 +234,14 @@ LANHUB_DB=./dev.sqlite go run .   # first start creates the database and app.key
 
 Styles are Tailwind, built from the `hub/` config into
 `gohub/web/static/app.css`.
+
+The hub image is built from the repo root, since it carries the agents:
+`docker build -f gohub/Dockerfile .`. `go run ./cmd/agentbundle` (in
+`gohub/`) builds the agents into `gohub/agentbuilds` for a hub you run with
+`go run`. To sign them, set `LANHUB_AGENT_SIGNING_KEY` to a base64 Ed25519
+seed (the image build takes it as the `agent_signing_key` build secret).
+A fork that publishes its own agents puts its own public key in
+`updatePublicKey` in `agent/selfupdate.go`.
 
 ## License
 

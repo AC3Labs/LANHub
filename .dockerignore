@@ -1,0 +1,12 @@
+# The hub image is built from the repo root (docker build -f gohub/Dockerfile .)
+# and only needs the hub and agent sources.
+*
+!gohub
+!agent
+# A machine's real agent token
+agent/config.json
+agent/dist
+gohub/dist
+gohub/dist-media
+gohub/agentbuilds/*
+!gohub/agentbuilds/README.md

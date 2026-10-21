@@ -4,7 +4,8 @@ services:
     # push to main. This file works standalone on any docker-compose-driven
     # platform (Dokploy, Portainer, Coolify, plain `docker compose up`), with
     # no repo checkout and no .env file. Working from a full clone and want
-    # to build your own? Swap this line for `build: ./gohub`.
+    # to build your own? Swap this line for
+    # `build: {context: ., dockerfile: gohub/Dockerfile}`.
     image: ghcr.io/ac3labs/lanhub:hub
     restart: unless-stopped
     read_only: true

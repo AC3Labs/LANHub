@@ -19,6 +19,7 @@ on:
     branches: [main]
     paths:
       - 'gohub/**'
+      - 'agent/**'
       - '.github/workflows/publish-image.yml'
 
 permissions:
@@ -43,10 +44,14 @@ jobs:
         id: version
         run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
 
+      # The hub carries the agents (from agent/), signed with the release
+      # key; agents only accept updates signed with it.
       - uses: docker/build-push-action@v6
         with:
-          context: ./gohub
+          context: .
           file: ./gohub/Dockerfile
+          secrets: |
+            agent_signing_key=${{ secrets.LANHUB_AGENT_SIGNING_KEY }}
           build-args: |
             LANHUB_VERSION=${{ steps.version.outputs.version }}
             LANHUB_REVISION=${{ github.sha }}

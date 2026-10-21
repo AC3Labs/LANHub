@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,6 +25,8 @@ func loadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("missing config file at %s: copy config.example.json to config.json and set a token before starting the agent", path)
 	}
 
+	// Windows PowerShell 5.1 saves UTF-8 with a byte-order mark.
+	raw = bytes.TrimPrefix(raw, []byte("\xef\xbb\xbf"))
 	cfg := &Config{Host: "0.0.0.0", Port: 8765}
 	if err := json.Unmarshal(raw, cfg); err != nil {
 		return nil, fmt.Errorf("invalid config file at %s: %w", path, err)

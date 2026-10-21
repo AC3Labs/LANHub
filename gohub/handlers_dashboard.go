@@ -29,6 +29,8 @@ type dashboardData struct {
 	OtherUser []*User
 	Form      *machineForm
 	Edit      []machineEdit // what the edit form is pre-filled with, per machine
+	// The hub can hand out agents: show install commands with the token.
+	CanInstallAgents bool
 }
 
 type machineEdit struct {
@@ -78,7 +80,7 @@ func (app *App) renderDashboard(w http.ResponseWriter, r *http.Request, status i
 		}
 		edits = append(edits, e)
 	}
-	app.render(w, r, status, "dashboard", "Dashboard", dashboardData{Machines: machines, OtherUser: others, Form: form, Edit: edits})
+	app.render(w, r, status, "dashboard", "Dashboard", dashboardData{Machines: machines, OtherUser: others, Form: form, Edit: edits, CanInstallAgents: app.agentBuilds != nil})
 }
 
 type machineStatus struct {

@@ -211,6 +211,7 @@ func (a *AgentClient) postJSON(ctx context.Context, path string, payload any, ou
 type AgentHealth struct {
 	Hostname string   `json:"hostname"`
 	OS       string   `json:"os"`
+	Arch     string   `json:"arch"` // agent 1.4.0+
 	Version  string   `json:"version"`
 	Features []string `json:"features"`
 	// Addresses are the machine's own IPs (agent 1.3.0+), used to name the

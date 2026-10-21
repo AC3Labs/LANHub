@@ -3,6 +3,32 @@
 All notable changes to LANHub are recorded here. Versioned as
 `major.minor.patch.build`.
 
+## [0.14.0.0] - 2026-10-21
+
+### Added
+- Agent updates from the Agents page. Each hub carries the agents that
+  match it; when an agent is behind, admins get **Update agent** (and
+  **Update all agents**). The agent checks the new version, runs it once to
+  make sure it starts on that machine, swaps it in and restarts, keeping
+  the old one as `lanhub-agent.old`. Agents only accept updates signed
+  with LANHub's release key, and never an older version, so an agent's
+  token or another hub can't make an agent run something else.
+- One-line agent installs: Add Machine shows a command (Linux and Windows)
+  that downloads the agent from the hub, checks it, sets the token and
+  installs the service. The Agents page has them too, under **Install an
+  agent**. Run again, they update an agent and keep its settings.
+- Agent 1.4.0: `POST /api/self-update`, and `version`, `configure` and
+  `has-token` commands for installers. Its health check also reports the
+  machine's architecture. It reads a `config.json` saved with a byte-order
+  mark (Windows PowerShell 5.1 does that).
+
+### Changed
+- The hub image is built from the repo root (`docker build -f
+  gohub/Dockerfile .`), since it now includes the agents. Go 1.27.3 (security
+  fixes in the standard library).
+- Agents older than 1.4.0 need the install command once more; after that
+  they update from the hub.
+
 ## [0.13.0.0] - 2026-10-19
 
 ### Added

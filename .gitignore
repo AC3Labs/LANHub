@@ -3,3 +3,6 @@
 agent/config.json
 # Private deployment notes for this install
 LANHub.md
+# Agent builds bundled into the hub (made by gohub/cmd/agentbundle)
+gohub/agentbuilds/*
+!gohub/agentbuilds/README.md

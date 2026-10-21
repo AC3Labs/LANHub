@@ -144,17 +144,54 @@ const FILE_ICONS = {
 function agentCard(id, lastSeen) {
     return {
         status: 'checking', lastSeen: lastSeen || '', version: '', direct: false,
+        updateTo: '', canPush: false, note: '', updating: false, message: '', failed: false,
         async init() {
+            await this.load();
+        },
+        async load() {
+            const wasBehind = this.updateTo && this.canPush;
             try {
                 const r = await api('GET', '/api/agents/' + id + '/status');
                 this.status = r.status;
                 this.lastSeen = r.last_seen || this.lastSeen;
                 this.version = r.version || '';
                 this.direct = !!r.direct;
+                this.updateTo = r.update_to || '';
+                this.canPush = !!r.can_push;
+                this.note = r.update_note || '';
             } catch (e) {
                 this.status = 'offline';
             }
+            // Counts for the page's "Update all agents" button.
+            const behind = this.updateTo && this.canPush;
+            if (behind && !wasBehind) this.$dispatch('agent-behind');
+            if (!behind && wasBehind) this.$dispatch('agent-current');
         },
+        // The hub sends the agent its signed update and waits for it to
+        // come back as the new version (up to about a minute and a half).
+        async update() {
+            this.updating = true; this.message = ''; this.failed = false;
+            try {
+                const r = await api('POST', '/api/agents/' + id + '/update');
+                this.message = r.message || 'Updated.';
+            } catch (e) {
+                this.failed = true;
+                this.message = e.message || 'The update failed.';
+            }
+            this.updating = false;
+            await this.load();
+        },
+    };
+}
+
+// The install commands on the Agents page, for this hub's own address.
+function agentInstall(version) {
+    const hub = window.location.origin;
+    return {
+        open: false, version,
+        linux: 'curl -fsSL ' + hub + '/agent/install.sh | sudo bash -s -- --token TOKEN',
+        windows: "& ([scriptblock]::Create((irm '" + hub + "/agent/install.ps1'))) -Token 'TOKEN'",
+        copy(text) { navigator.clipboard && navigator.clipboard.writeText(text); },
     };
 }
 
